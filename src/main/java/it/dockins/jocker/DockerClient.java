@@ -8,7 +8,7 @@ import it.dockins.jocker.model.ContainerCreateResponse;
 import it.dockins.jocker.model.ContainerInspect;
 import io.dockins.jocker.model.ContainerSummary;
 import io.dockins.jocker.model.SystemInfo;
-import it.dockins.jocker.model.Filters;
+import it.dockins.jocker.model.ContainersFilters;
 import it.dockins.jocker.model.Version;
 import org.newsclub.net.unix.AFUNIXSocket;
 import org.newsclub.net.unix.AFUNIXSocketAddress;
@@ -72,7 +72,7 @@ public class DockerClient {
     /**
      * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerList
      */
-    public ContainerSummary containerList(boolean all, int limit, boolean size, Filters filters) throws IOException {
+    public ContainerSummary containerList(boolean all, int limit, boolean size, ContainersFilters filters) throws IOException {
         return containerList(all, limit, size, gson.toJson(filters));
     }
 
@@ -226,7 +226,9 @@ public class DockerClient {
     }
 
     public static void main(String[] args) throws Exception {
-        System.out.println(new DockerClient(new URI("unix:///var/run/docker.sock")).ContainerList(true, 0, true, null));
+        final DockerClient client = new DockerClient(new URI("unix:///var/run/docker.sock"));
+        final ContainerSummary x = client.containerList(true, 0, true, new ContainersFilters().health("none"));
+        System.out.println(x);
     }
 
 }

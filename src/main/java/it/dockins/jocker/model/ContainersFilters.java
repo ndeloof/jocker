@@ -5,7 +5,7 @@ import com.google.gson.annotations.SerializedName;
 /**
  * @author <a href="mailto:nicolas.deloof@gmail.com">Nicolas De Loof</a>
  */
-public class Filters {
+public class ContainersFilters {
 
     @SerializedName("ancestor")
     private String[] ancestor;
@@ -173,77 +173,77 @@ public class Filters {
     }
 
 
-    public Filters ancestor(String ... ancestor) {
+    public ContainersFilters ancestor(String ... ancestor) {
         this.ancestor = ancestor;
         return this;
     }
 
-    public Filters before(String ... before) {
+    public ContainersFilters before(String ... before) {
         this.before = before;
         return this;
     }
 
-    public Filters expose(String ... expose) {
+    public ContainersFilters expose(String ... expose) {
         this.expose = expose;
         return this;
     }
 
-    public Filters exited(String ... exited) {
+    public ContainersFilters exited(String ... exited) {
         this.exited = exited;
         return this;
     }
 
-    public Filters health(String ... health) {
+    public ContainersFilters health(String ... health) {
         this.health = health;
         return this;
     }
 
-    public Filters id(String ... id) {
+    public ContainersFilters id(String ... id) {
         this.id = id;
         return this;
     }
 
-    public Filters isolation(String ... isolation) {
+    public ContainersFilters isolation(String ... isolation) {
         this.isolation = isolation;
         return this;
     }
 
-    public Filters isTask(String ... isTask) {
+    public ContainersFilters isTask(String ... isTask) {
         this.isTask = isTask;
         return this;
     }
 
-    public Filters label(String ... label) {
+    public ContainersFilters label(String ... label) {
         this.label = label;
         return this;
     }
 
-    public Filters name(String ... name) {
+    public ContainersFilters name(String ... name) {
         this.name = name;
         return this;
     }
 
-    public Filters network(String ... network) {
+    public ContainersFilters network(String ... network) {
         this.network = network;
         return this;
     }
 
-    public Filters publish(String ... publish) {
+    public ContainersFilters publish(String ... publish) {
         this.publish = publish;
         return this;
     }
 
-    public Filters since(String ... since) {
+    public ContainersFilters since(String ... since) {
         this.since = since;
         return this;
     }
 
-    public Filters status(String ... status) {
+    public ContainersFilters status(String ... status) {
         this.status = status;
         return this;
     }
 
-    public Filters volume(String ... volume) {
+    public ContainersFilters volume(String ... volume) {
         this.volume = volume;
         return this;
     }
