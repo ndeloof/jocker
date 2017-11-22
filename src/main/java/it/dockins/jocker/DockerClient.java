@@ -3,9 +3,12 @@ package it.dockins.jocker;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import it.dockins.jocker.model.ContainerSpec;
+import it.dockins.jocker.model.ContainerCreateResponse;
 import it.dockins.jocker.model.ContainerInspect;
 import io.dockins.jocker.model.ContainerSummary;
 import io.dockins.jocker.model.SystemInfo;
+import it.dockins.jocker.model.Filters;
 import it.dockins.jocker.model.Version;
 import org.newsclub.net.unix.AFUNIXSocket;
 import org.newsclub.net.unix.AFUNIXSocketAddress;
@@ -66,11 +69,17 @@ public class DockerClient {
         return gson.fromJson(doGET("/v"+version+"/info"), SystemInfo.class);
     }
 
-    public ContainerInspect containerInspect(String id) throws IOException {
-        return gson.fromJson(doGET("/v"+version+"/containers/"+id+"/json"), ContainerInspect.class);
+    /**
+     * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerList
+     */
+    public ContainerSummary containerList(boolean all, int limit, boolean size, Filters filters) throws IOException {
+        return containerList(all, limit, size, gson.toJson(filters));
     }
 
-    public ContainerSummary ContainerList(boolean all, int limit, boolean size, String filters) throws IOException {
+    /**
+     * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerList
+     */
+    public ContainerSummary containerList(boolean all, int limit, boolean size, String filters) throws IOException {
         StringBuilder path = new StringBuilder("/v").append(version).append("/containers/json");
         path.append("?all=").append(all);
         path.append("&size=").append(size);
@@ -78,8 +87,29 @@ public class DockerClient {
         if (filters != null) path.append("&filters=").append(filters);
 
         String json = doGET(path.toString());
-        System.out.println(json);
         return gson.fromJson(json, ContainerSummary.class);
+    }
+
+    /**
+     * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerCreate
+     */
+    public ContainerCreateResponse containerCreate(String name, ContainerSpec containerConfig) throws IOException {
+
+        StringBuilder path = new StringBuilder("/v").append(version).append("/containers/create");
+        if (name != null) {
+            path.append("?name=").append(name);
+        }
+
+        String spec = gson.toJson(containerConfig);
+        String json = doPost(path.toString(), spec);
+        return gson.fromJson(json, ContainerCreateResponse.class);
+    }
+
+    /**
+     * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerInspect
+     */
+    public ContainerInspect containerInspect(String id) throws IOException {
+        return gson.fromJson(doGET("/v"+version+"/containers/"+id+"/json"), ContainerInspect.class);
     }
 
 
