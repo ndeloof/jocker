@@ -14,10 +14,14 @@ import it.dockins.jocker.model.SystemInfo;
 import it.dockins.jocker.model.ContainersFilters;
 import it.dockins.jocker.model.Streams;
 import it.dockins.jocker.model.Version;
+import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
+import org.apache.commons.compress.archivers.tar.TarUtils;
 import org.newsclub.net.unix.AFUNIXSocket;
 import org.newsclub.net.unix.AFUNIXSocketAddress;
 
 import javax.net.ssl.SSLContext;
+import java.io.ByteArrayOutputStream;
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -28,13 +32,14 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.zip.GZIPOutputStream;
 
 /**
  * Implement <a href="https://docs.docker.com/engine/api/v1.32">Docker API</a> using a plain old java
  * {@link Socket}.
  * @author <a href="mailto:nicolas.deloof@gmail.com">Nicolas De Loof</a>
  */
-public class DockerClient {
+public class DockerClient implements Closeable {
 
     private final Socket socket;
 
@@ -68,6 +73,10 @@ public class DockerClient {
         version = version().getApiVersion();
     }
 
+    @Override
+    public void close() throws IOException {
+        socket.close();
+    }
 
     public Version version() throws IOException {
         Response r = doGET("/version");
@@ -101,6 +110,25 @@ public class DockerClient {
         return gson.fromJson(r.getBody(), ContainerSummary.class);
     }
 
+
+    /**
+     * copy a single file to a container
+     * see https://docs.docker.com/engine/api/v1.32/#operation/PutContainerArchive
+     */
+    public void putContainerArchive(String container, String path, boolean noOverwriteDirNonDir, File file) throws IOException {
+        StringBuilder uri = new StringBuilder("/v").append(version)
+                .append("/containers/").append(container).append("/archive")
+                .append("?path=").append(path)
+                .append("&noOverwriteDirNonDir=").append(noOverwriteDirNonDir);
+
+        final ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        try (GZIPOutputStream gz = new GZIPOutputStream(bos);
+             TarArchiveOutputStream tar = new TarArchiveOutputStream(gz)) {
+            tar.createArchiveEntry(file, file.getName());
+        }
+        doPut(uri.toString(), bos.toByteArray());
+    }
+
     /**
      * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerCreate
      */
@@ -121,7 +149,8 @@ public class DockerClient {
      */
     public ContainerInspect containerInspect(String id) throws IOException {
         Response r = doGET("/v"+version+"/containers/"+id+"/json");
-        return gson.fromJson(r.getBody(), ContainerInspect.class);
+        final String body = r.getBody();
+        return gson.fromJson(body, ContainerInspect.class);
     }
 
     public String containerExec(String container, ExecConfig execConfig) throws IOException {
@@ -151,6 +180,19 @@ public class DockerClient {
     }
 
 
+    private Response doGET(String path) throws IOException {
+        final OutputStream out = socket.getOutputStream();
+
+        final PrintWriter w = new PrintWriter(out);
+        w.println("GET " + path + " HTTP/1.1");
+        w.println("Host: localhost");
+        w.println();
+        w.flush();
+
+        return getResponse();
+
+    }
+
     private Response doPost(String path, String payload) throws IOException {
 
         final OutputStream out = socket.getOutputStream();
@@ -168,17 +210,20 @@ public class DockerClient {
         return getResponse();
     }
 
-    private Response doGET(String path) throws IOException {
+    private Response doPut(String path, byte[] bytes) throws IOException {
+
         final OutputStream out = socket.getOutputStream();
 
         final PrintWriter w = new PrintWriter(out);
-        w.println("GET " + path + " HTTP/1.1");
+        w.println("PUT " + path + " HTTP/1.1");
         w.println("Host: localhost");
+        w.println("Content-Type: application/gzip");
+        w.println("Content-Length: "+bytes.length);
         w.println();
         w.flush();
+        out.write(bytes);
 
         return getResponse();
-
     }
 
     private Response getResponse() throws IOException {
@@ -192,6 +237,9 @@ public class DockerClient {
         int responseCode = Integer.parseInt(line.substring(i+1,j));
         String responseMessage = line.substring(j+1);
 
+        if (responseCode == 404) {
+            throw new NotFoundException();
+        }
         if (responseCode / 100 > 2) {
             throw new IOException(line);
         }
@@ -262,7 +310,7 @@ public class DockerClient {
 
     public static void main(String[] args) throws Exception {
         final DockerClient client = new DockerClient("unix:///var/run/docker.sock");
-        final ContainerSummary x = client.containerList(true, 0, true, new ContainersFilters().health("none"));
+        final ContainerInspect x = client.containerInspect("c922faab456f");
         System.out.println(x);
     }
 

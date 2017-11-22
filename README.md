@@ -72,7 +72,7 @@ you do something you consider useful :P
   - [ ] [ContainerDelete](https://docs.docker.com/engine/api/v1.32/#operation/ContainerDelete)
   - [ ] [ContainerArchiveInfo](https://docs.docker.com/engine/api/v1.32/#operation/ContainerArchiveInfo)
   - [ ] [ContainerArchive](https://docs.docker.com/engine/api/v1.32/#operation/ContainerArchive)
-  - [ ] [PutContainerArchive](https://docs.docker.com/engine/api/v1.32/#operation/PutContainerArchive)
+  - [x] [PutContainerArchive](https://docs.docker.com/engine/api/v1.32/#operation/PutContainerArchive)
   - [ ] [ContainerPrune](https://docs.docker.com/engine/api/v1.32/#operation/ContainerPrune)
   - [ ] [ContainerAttach](https://docs.docker.com/engine/api/v1.32/#operation/ContainerAttach)
          
