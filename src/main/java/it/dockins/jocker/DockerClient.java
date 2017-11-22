@@ -3,12 +3,15 @@ package it.dockins.jocker;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import io.dockins.jocker.model.ExecConfig;
+import io.dockins.jocker.model.IdResponse;
 import it.dockins.jocker.model.ContainerSpec;
 import it.dockins.jocker.model.ContainerCreateResponse;
 import it.dockins.jocker.model.ContainerInspect;
 import io.dockins.jocker.model.ContainerSummary;
 import io.dockins.jocker.model.SystemInfo;
 import it.dockins.jocker.model.ContainersFilters;
+import it.dockins.jocker.model.Streams;
 import it.dockins.jocker.model.Version;
 import org.newsclub.net.unix.AFUNIXSocket;
 import org.newsclub.net.unix.AFUNIXSocketAddress;
@@ -110,6 +113,31 @@ public class DockerClient {
      */
     public ContainerInspect containerInspect(String id) throws IOException {
         return gson.fromJson(doGET("/v"+version+"/containers/"+id+"/json"), ContainerInspect.class);
+    }
+
+    public String containerExec(String container, ExecConfig execConfig) throws IOException {
+        StringBuilder path = new StringBuilder("/v").append(version).append("/containers/").append(container).append("/exec");
+        String spec = gson.toJson(execConfig);
+        return gson.fromJson(doPost(path.toString(), spec), IdResponse.class).getId();
+    }
+
+
+    public Streams execStart(String id, boolean detach, boolean tty) throws IOException {
+        StringBuilder path = new StringBuilder("/v").append(version).append("/exec/").append(id).append("/start");
+        doPost(path.toString(), "{\"Detach\": "+detach+", \"Tty\": "+tty+"}");
+        if (detach) return null;
+        return new Streams() {
+
+            @Override
+            public InputStream stdout() throws IOException {
+                return new DockerMultiplexedInputStream(socket.getInputStream());
+            }
+
+            @Override
+            public OutputStream stdin() throws IOException {
+                return socket.getOutputStream();
+            }
+        };
     }
 
 

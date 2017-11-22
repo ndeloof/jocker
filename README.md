@@ -96,7 +96,11 @@ you do something you consider useful :P
 
 ### Exec
 
-TODO
+  - [x] [ContainerExec](https://docs.docker.com/engine/api/v1.32/#operation/ContainerExec)
+  - [x] [ExecStart](https://docs.docker.com/engine/api/v1.32/#operation/ExecStart)
+  - [ ] [ExecResize](https://docs.docker.com/engine/api/v1.32/#operation/ExecResize)
+  - [ ] [ExecInspect](https://docs.docker.com/engine/api/v1.32/#operation/ExecInspect)
+
 
 ### Networks 
 
