@@ -60,7 +60,7 @@ public class DockerMultiplexedInputStream extends InputStream {
                     System.err.println(new String(payload, StandardCharsets.UTF_8));
                     break;
                 default:
-                    throw new IOException("Unexpected application/vnd.docker.raw-stream frame type " + header);
+                    throw new IOException("Unexpected application/vnd.docker.raw-stream frame type " + header[0]);
             }
         }
     }

@@ -3,6 +3,7 @@ package it.dockins.jocker;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.sun.org.apache.regexp.internal.RE;
 import io.dockins.jocker.model.ExecConfig;
 import io.dockins.jocker.model.IdResponse;
 import it.dockins.jocker.model.ContainerSpec;
@@ -25,6 +26,8 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Implement <a href="https://docs.docker.com/engine/api/v1.32">Docker API</a> using a plain old java
@@ -67,14 +70,14 @@ public class DockerClient {
 
 
     public Version version() throws IOException {
-        doGET("/version");
-        return gson.fromJson(getResponse(), Version.class);
+        Response r = doGET("/version");
+        return gson.fromJson(r.getBody(), Version.class);
     }
 
 
     public SystemInfo info() throws IOException {
-        doGET("/v"+version+"/info");
-        return gson.fromJson(getResponse(), SystemInfo.class);
+        Response r = doGET("/v"+version+"/info");
+        return gson.fromJson(r.getBody(), SystemInfo.class);
     }
 
     /**
@@ -94,8 +97,8 @@ public class DockerClient {
         if (limit > 0) path.append("&limit=").append(limit);
         if (filters != null) path.append("&filters=").append(filters);
 
-        doGET(path.toString());
-        return gson.fromJson(getResponse(), ContainerSummary.class);
+        Response r = doGET(path.toString());
+        return gson.fromJson(r.getBody(), ContainerSummary.class);
     }
 
     /**
@@ -109,23 +112,23 @@ public class DockerClient {
         }
 
         String spec = gson.toJson(containerConfig);
-        doPost(path.toString(), spec);
-        return gson.fromJson(getResponse(), ContainerCreateResponse.class);
+        Response r = doPost(path.toString(), spec);
+        return gson.fromJson(r.getBody(), ContainerCreateResponse.class);
     }
 
     /**
      * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerInspect
      */
     public ContainerInspect containerInspect(String id) throws IOException {
-        doGET("/v"+version+"/containers/"+id+"/json");
-        return gson.fromJson(getResponse(), ContainerInspect.class);
+        Response r = doGET("/v"+version+"/containers/"+id+"/json");
+        return gson.fromJson(r.getBody(), ContainerInspect.class);
     }
 
     public String containerExec(String container, ExecConfig execConfig) throws IOException {
         StringBuilder path = new StringBuilder("/v").append(version).append("/containers/").append(container).append("/exec");
         String spec = gson.toJson(execConfig);
-        doPost(path.toString(), spec);
-        return gson.fromJson(getResponse(), IdResponse.class).getId();
+        Response r = doPost(path.toString(), spec);
+        return gson.fromJson(r.getBody(), IdResponse.class).getId();
     }
 
 
@@ -148,7 +151,7 @@ public class DockerClient {
     }
 
 
-    private void doPost(String path, String payload) throws IOException {
+    private Response doPost(String path, String payload) throws IOException {
 
         final OutputStream out = socket.getOutputStream();
         final byte[] bytes = payload.getBytes(StandardCharsets.UTF_8);
@@ -161,9 +164,11 @@ public class DockerClient {
         w.println();
         w.flush();
         out.write(bytes);
+
+        return getResponse();
     }
 
-    private void doGET(String path) throws IOException {
+    private Response doGET(String path) throws IOException {
         final OutputStream out = socket.getOutputStream();
 
         final PrintWriter w = new PrintWriter(out);
@@ -171,9 +176,12 @@ public class DockerClient {
         w.println("Host: localhost");
         w.println();
         w.flush();
+
+        return getResponse();
+
     }
 
-    private String getResponse() throws IOException {
+    private Response getResponse() throws IOException {
 
         final InputStream in = socket.getInputStream();
 
@@ -188,6 +196,7 @@ public class DockerClient {
             throw new IOException(line);
         }
 
+        Map<String, String> headers = new HashMap<>();
         int length = -1;
         boolean chunked = false;
         while ((line = readLine(in)) != null) {
@@ -195,21 +204,16 @@ public class DockerClient {
             final int x = line.indexOf(':');
             String header = line.substring(0, x);
             final String value = line.substring(x + 2);
-            if ("Content-Length".equals(header)) {
-                length = Integer.parseInt(value);
-            }
-            if ("Transfer-Encoding".equals(header) && "chunked".equals(value)) {
-                chunked = true;
-            }
+            headers.put(header, value);
         }
 
-        if (length > 0) {
-            return readPayload(in, length);
-        } else if (chunked) {
-            return readChunkedPayload(in);
-        } else {
-            throw new IOException("Unexpected Transfer-Encoding");
+        if (headers.containsKey("Content-Length")) {
+            return () -> readPayload(in, Integer.parseInt(headers.get("Content-Length")));
+        } else if (headers.containsKey("Transfer-Encoding") && "chunked".equals(headers.get("Transfer-Encoding"))) {
+            return () -> readChunkedPayload(in);
         }
+
+        return null;
     }
 
     private String readLine(final InputStream in) throws IOException {
@@ -262,4 +266,8 @@ public class DockerClient {
         System.out.println(x);
     }
 
+
+    interface Response {
+        String getBody() throws IOException;
+    }
 }
