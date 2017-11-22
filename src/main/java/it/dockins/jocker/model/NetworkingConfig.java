@@ -1,7 +1,7 @@
 package it.dockins.jocker.model;
 
 import com.google.gson.annotations.SerializedName;
-import io.dockins.jocker.model.EndpointSettings;
+import it.dockins.jocker.model.EndpointSettings;
 
 /**
  * @author <a href="mailto:nicolas.deloof@gmail.com">Nicolas De Loof</a>

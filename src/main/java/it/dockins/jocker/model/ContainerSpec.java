@@ -1,10 +1,10 @@
 package it.dockins.jocker.model;
 
 import com.google.gson.annotations.SerializedName;
-import io.dockins.jocker.model.ContainerConfig;
-import io.dockins.jocker.model.ContainerConfigVolumes;
-import io.dockins.jocker.model.HealthConfig;
-import io.dockins.jocker.model.HostConfig;
+import it.dockins.jocker.model.ContainerConfig;
+import it.dockins.jocker.model.ContainerConfigVolumes;
+import it.dockins.jocker.model.HealthConfig;
+import it.dockins.jocker.model.HostConfig;
 
 import java.util.ArrayList;
 import java.util.List;
