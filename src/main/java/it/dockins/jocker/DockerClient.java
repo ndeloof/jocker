@@ -67,12 +67,14 @@ public class DockerClient {
 
 
     public Version version() throws IOException {
-        return gson.fromJson(doGET("/version"), Version.class);
+        doGET("/version");
+        return gson.fromJson(getResponse(), Version.class);
     }
 
 
     public SystemInfo info() throws IOException {
-        return gson.fromJson(doGET("/v"+version+"/info"), SystemInfo.class);
+        doGET("/v"+version+"/info");
+        return gson.fromJson(getResponse(), SystemInfo.class);
     }
 
     /**
@@ -92,8 +94,8 @@ public class DockerClient {
         if (limit > 0) path.append("&limit=").append(limit);
         if (filters != null) path.append("&filters=").append(filters);
 
-        String json = doGET(path.toString());
-        return gson.fromJson(json, ContainerSummary.class);
+        doGET(path.toString());
+        return gson.fromJson(getResponse(), ContainerSummary.class);
     }
 
     /**
@@ -107,21 +109,23 @@ public class DockerClient {
         }
 
         String spec = gson.toJson(containerConfig);
-        String json = doPost(path.toString(), spec);
-        return gson.fromJson(json, ContainerCreateResponse.class);
+        doPost(path.toString(), spec);
+        return gson.fromJson(getResponse(), ContainerCreateResponse.class);
     }
 
     /**
      * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerInspect
      */
     public ContainerInspect containerInspect(String id) throws IOException {
-        return gson.fromJson(doGET("/v"+version+"/containers/"+id+"/json"), ContainerInspect.class);
+        doGET("/v"+version+"/containers/"+id+"/json");
+        return gson.fromJson(getResponse(), ContainerInspect.class);
     }
 
     public String containerExec(String container, ExecConfig execConfig) throws IOException {
         StringBuilder path = new StringBuilder("/v").append(version).append("/containers/").append(container).append("/exec");
         String spec = gson.toJson(execConfig);
-        return gson.fromJson(doPost(path.toString(), spec), IdResponse.class).getId();
+        doPost(path.toString(), spec);
+        return gson.fromJson(getResponse(), IdResponse.class).getId();
     }
 
 
@@ -144,9 +148,8 @@ public class DockerClient {
     }
 
 
-    private String doPost(String path, String payload) throws IOException {
+    private void doPost(String path, String payload) throws IOException {
 
-        final InputStream in = socket.getInputStream();
         final OutputStream out = socket.getOutputStream();
         final byte[] bytes = payload.getBytes(StandardCharsets.UTF_8);
 
@@ -158,12 +161,9 @@ public class DockerClient {
         w.println();
         w.flush();
         out.write(bytes);
-
-        return getResponse(in);
     }
 
-    private String doGET(String path) throws IOException {
-        final InputStream in = socket.getInputStream();
+    private void doGET(String path) throws IOException {
         final OutputStream out = socket.getOutputStream();
 
         final PrintWriter w = new PrintWriter(out);
@@ -171,11 +171,11 @@ public class DockerClient {
         w.println("Host: localhost");
         w.println();
         w.flush();
-
-        return getResponse(in);
     }
 
-    private String getResponse(InputStream in) throws IOException {
+    private String getResponse() throws IOException {
+
+        final InputStream in = socket.getInputStream();
 
         String line = readLine(in);
         System.out.println("> " + line);
