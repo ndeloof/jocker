@@ -39,12 +39,15 @@ public class DockerClient {
 
     private String version;
 
-    public DockerClient(URI uri) throws IOException {
-        this(uri, null);
+    public DockerClient(String dockerHost) throws IOException {
+        this(dockerHost, null);
     }
-    public DockerClient(URI uri, SSLContext ssl) throws IOException {
 
+    public DockerClient(String dockerHost, SSLContext ssl) throws IOException {
+
+        URI uri = URI.create(dockerHost);
         if ("unix".equals(uri.getScheme())) {
+            
             final AFUNIXSocketAddress unix = new AFUNIXSocketAddress(new File(uri.getPath()));
             //UnixSocketAddress address = new UnixSocketAddress("/var/run/docker.sock");
             // socket = UnixSocketChannel.open(address).socket();
@@ -254,7 +257,7 @@ public class DockerClient {
     }
 
     public static void main(String[] args) throws Exception {
-        final DockerClient client = new DockerClient(new URI("unix:///var/run/docker.sock"));
+        final DockerClient client = new DockerClient("unix:///var/run/docker.sock");
         final ContainerSummary x = client.containerList(true, 0, true, new ContainersFilters().health("none"));
         System.out.println(x);
     }
