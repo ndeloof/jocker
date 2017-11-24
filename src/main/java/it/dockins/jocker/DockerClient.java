@@ -3,8 +3,8 @@ package it.dockins.jocker;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.sun.org.apache.regexp.internal.RE;
 import it.dockins.jocker.model.ExecConfig;
+import it.dockins.jocker.model.ExecInspect;
 import it.dockins.jocker.model.IdResponse;
 import it.dockins.jocker.model.ContainerSpec;
 import it.dockins.jocker.model.ContainerCreateResponse;
@@ -15,7 +15,6 @@ import it.dockins.jocker.model.ContainersFilters;
 import it.dockins.jocker.model.Streams;
 import it.dockins.jocker.model.Version;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
-import org.apache.commons.compress.archivers.tar.TarUtils;
 import org.newsclub.net.unix.AFUNIXSocket;
 import org.newsclub.net.unix.AFUNIXSocketAddress;
 
@@ -30,6 +29,7 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.zip.GZIPOutputStream;
@@ -132,7 +132,7 @@ public class DockerClient implements Closeable {
     /**
      * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerCreate
      */
-    public ContainerCreateResponse containerCreate(String name, ContainerSpec containerConfig) throws IOException {
+    public ContainerCreateResponse containerCreate(ContainerSpec containerConfig, String name) throws IOException {
 
         StringBuilder path = new StringBuilder("/v").append(version).append("/containers/create");
         if (name != null) {
@@ -145,10 +145,32 @@ public class DockerClient implements Closeable {
     }
 
     /**
+     * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerStart
+     */
+    public void containerStart(String container) throws IOException {
+        StringBuilder uri = new StringBuilder("/v").append(version)
+                .append("/containers/").append(container).append("/start");
+        doPost(uri.toString(), "");
+    }
+
+    /**
+     * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerDelete
+     */
+    public void containerDelete(String container, boolean volumes, boolean links, boolean force) throws IOException {
+        StringBuilder uri = new StringBuilder("/v").append(version)
+                .append("/containers/").append(container)
+                .append("?v=").append(volumes)
+                .append("?link=").append(links)
+                .append("&force=").append(force);
+        doDelete("/v"+version+"/containers/"+container);
+    }
+
+
+    /**
      * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerInspect
      */
-    public ContainerInspect containerInspect(String id) throws IOException {
-        Response r = doGET("/v"+version+"/containers/"+id+"/json");
+    public ContainerInspect containerInspect(String container) throws IOException {
+        Response r = doGET("/v"+version+"/containers/"+container+"/json");
         final String body = r.getBody();
         return gson.fromJson(body, ContainerInspect.class);
     }
@@ -179,6 +201,14 @@ public class DockerClient implements Closeable {
         };
     }
 
+    public ExecInspect execInspect(String id) throws IOException {
+        StringBuilder path = new StringBuilder("/v").append(version).append("/exec/").append(id).append("/json");
+        Response r = doGET(path.toString());
+        final String body = r.getBody();
+        return gson.fromJson(body, ExecInspect.class);
+    }
+
+
 
     private Response doGET(String path) throws IOException {
         final OutputStream out = socket.getOutputStream();
@@ -189,7 +219,7 @@ public class DockerClient implements Closeable {
         w.println();
         w.flush();
 
-        return getResponse();
+        return getResponse(path);
 
     }
 
@@ -207,7 +237,7 @@ public class DockerClient implements Closeable {
         w.flush();
         out.write(bytes);
 
-        return getResponse();
+        return getResponse(path);
     }
 
     private Response doPut(String path, byte[] bytes) throws IOException {
@@ -223,15 +253,28 @@ public class DockerClient implements Closeable {
         w.flush();
         out.write(bytes);
 
-        return getResponse();
+        return getResponse(path);
     }
 
-    private Response getResponse() throws IOException {
+    private Response doDelete(String path) throws IOException {
+
+        final OutputStream out = socket.getOutputStream();
+
+        final PrintWriter w = new PrintWriter(out);
+        w.println("DELETE " + path + " HTTP/1.1");
+        w.println("Host: localhost");
+        w.println();
+        w.flush();
+
+        return getResponse(path);
+    }
+
+    private Response getResponse(String path) throws IOException {
 
         final InputStream in = socket.getInputStream();
 
         String line = readLine(in);
-        System.out.println("> " + line);
+        System.out.println(path + " -> " + line);
         int i = line.indexOf(' ');
         int j = line.indexOf(' ',  i+1);
         int responseCode = Integer.parseInt(line.substring(i+1,j));
@@ -310,8 +353,9 @@ public class DockerClient implements Closeable {
 
     public static void main(String[] args) throws Exception {
         final DockerClient client = new DockerClient("unix:///var/run/docker.sock");
-        final ContainerInspect x = client.containerInspect("c922faab456f");
-        System.out.println(x);
+        final String id = client.containerExec("07b605fba649", new ExecConfig().cmd(Arrays.asList("sleep", "1000")));
+        client.execStart(id, true, false);
+        System.out.println(client.execInspect(id));
     }
 
 
