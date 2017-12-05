@@ -3,18 +3,20 @@ package it.dockins.jocker;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import it.dockins.jocker.model.ContainerInspectResponse;
 import it.dockins.jocker.model.ExecConfig;
-import it.dockins.jocker.model.ExecInspect;
+import it.dockins.jocker.model.ExecInspectResponse;
 import it.dockins.jocker.model.IdResponse;
 import it.dockins.jocker.model.ContainerSpec;
 import it.dockins.jocker.model.ContainerCreateResponse;
-import it.dockins.jocker.model.ContainerInspect;
 import it.dockins.jocker.model.ContainerSummary;
 import it.dockins.jocker.model.SystemInfo;
 import it.dockins.jocker.model.ContainersFilters;
 import it.dockins.jocker.model.Streams;
-import it.dockins.jocker.model.Version;
+import it.dockins.jocker.model.SystemVersionResponse;
+import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
+import org.apache.commons.compress.utils.IOUtils;
 import org.newsclub.net.unix.AFUNIXSocket;
 import org.newsclub.net.unix.AFUNIXSocketAddress;
 
@@ -22,6 +24,7 @@ import javax.net.ssl.SSLContext;
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -78,9 +81,9 @@ public class DockerClient implements Closeable {
         socket.close();
     }
 
-    public Version version() throws IOException {
+    public SystemVersionResponse version() throws IOException {
         Response r = doGET("/version");
-        return gson.fromJson(r.getBody(), Version.class);
+        return gson.fromJson(r.getBody(), SystemVersionResponse.class);
     }
 
 
@@ -123,8 +126,12 @@ public class DockerClient implements Closeable {
 
         final ByteArrayOutputStream bos = new ByteArrayOutputStream();
         try (GZIPOutputStream gz = new GZIPOutputStream(bos);
-             TarArchiveOutputStream tar = new TarArchiveOutputStream(gz)) {
-            tar.createArchiveEntry(file, file.getName());
+             TarArchiveOutputStream tar = new TarArchiveOutputStream(gz);
+             InputStream in = new FileInputStream(file)) {
+            final ArchiveEntry entry = tar.createArchiveEntry(file, file.getName());
+            tar.putArchiveEntry(entry);
+            IOUtils.copy(in, tar);
+            tar.closeArchiveEntry();
         }
         doPut(uri.toString(), bos.toByteArray());
     }
@@ -169,10 +176,10 @@ public class DockerClient implements Closeable {
     /**
      * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerInspect
      */
-    public ContainerInspect containerInspect(String container) throws IOException {
+    public ContainerInspectResponse containerInspect(String container) throws IOException {
         Response r = doGET("/v"+version+"/containers/"+container+"/json");
         final String body = r.getBody();
-        return gson.fromJson(body, ContainerInspect.class);
+        return gson.fromJson(body, ContainerInspectResponse.class);
     }
 
     public String containerExec(String container, ExecConfig execConfig) throws IOException {
@@ -201,11 +208,11 @@ public class DockerClient implements Closeable {
         };
     }
 
-    public ExecInspect execInspect(String id) throws IOException {
+    public ExecInspectResponse execInspect(String id) throws IOException {
         StringBuilder path = new StringBuilder("/v").append(version).append("/exec/").append(id).append("/json");
         Response r = doGET(path.toString());
         final String body = r.getBody();
-        return gson.fromJson(body, ExecInspect.class);
+        return gson.fromJson(body, ExecInspectResponse.class);
     }
 
 
@@ -353,9 +360,21 @@ public class DockerClient implements Closeable {
 
     public static void main(String[] args) throws Exception {
         final DockerClient client = new DockerClient("unix:///var/run/docker.sock");
-        final String id = client.containerExec("07b605fba649", new ExecConfig().cmd(Arrays.asList("sleep", "1000")));
-        client.execStart(id, true, false);
-        System.out.println(client.execInspect(id));
+        final String container = client.containerCreate(new ContainerSpec().image("ubuntu").cmd("sleep", "100"), null).getId();
+        client.containerStart(container);
+        Thread.sleep(1);
+        client.putContainerArchive(container, "/tmp/", false, new File("./pom.xml"));
+        final String id = client.containerExec(container, new ExecConfig().cmd(Arrays.asList("cat", "/tmp/pom.xml")).attachStdout(true));
+        final Streams streams = client.execStart(id, false, false);
+        try {
+            byte[] buffer = new byte[1024];
+            int i;
+            while ((i = streams.stdout().read(buffer, 0, 1024)) > 0) {
+                System.out.println(new String(buffer, 0, i));
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
 
