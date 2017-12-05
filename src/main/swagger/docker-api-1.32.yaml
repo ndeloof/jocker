@@ -2906,6 +2906,13 @@ definitions:
             Kind: "GPU"
             Value: "UUID2"
 
+  UnlockKey:
+    type: "string"
+    description: "The swarm's unlock key."
+    example:
+      UnlockKey: "SWMKEY-1-7c37Cc8654o6p38HnroywCi19pllOnGtbdZEgtKxZu8"
+
+
   ServiceSpec:
     description: "User modifiable configuration for a service."
     properties:
@@ -4324,6 +4331,7 @@ paths:
           in: "body"
           description: "Container to create"
           schema:
+            title: "ContainerCreateRequest"
             allOf:
               - $ref: "#/definitions/ContainerConfig"
               - type: "object"
@@ -4464,6 +4472,7 @@ paths:
           description: "Container created successfully"
           schema:
             type: "object"
+            title: "ContainerCreateResponse"
             required: [Id, Warnings]
             properties:
               Id:
@@ -4512,6 +4521,7 @@ paths:
           description: "no error"
           schema:
             type: "object"
+            title: "ContainerInspectResponse"
             properties:
               Id:
                 description: "The ID of the container"
@@ -4796,6 +4806,7 @@ paths:
           description: "no error"
           schema:
             type: "object"
+            title: "ContainerTopResponse"
             properties:
               Titles:
                 description: "The ps column titles"
@@ -4951,6 +4962,7 @@ paths:
             items:
               type: "object"
               x-go-name: "ContainerChangeResponseItem"
+              title: "ContainerChangeResponseItem"
               required: [Path, Kind]
               properties:
                 Path:
@@ -5329,6 +5341,7 @@ paths:
           description: "The container has been updated."
           schema:
             type: "object"
+            title: "ContainerUpdateResponse"
             properties:
               Warnings:
                 type: "array"
@@ -5682,6 +5695,7 @@ paths:
           description: "The container has exit."
           schema:
             type: "object"
+            title: "ContainerWaitResponse"
             required: [StatusCode]
             properties:
               StatusCode:
@@ -5920,6 +5934,7 @@ paths:
           description: "No error"
           schema:
             type: "object"
+            title: "ContainerPruneResponse"
             properties:
               ContainersDeleted:
                 description: "Container IDs that were deleted"
@@ -6171,6 +6186,7 @@ paths:
           description: "No error"
           schema:
             type: "object"
+            title: "BuildPruneResponse"
             properties:
               SpaceReclaimed:
                 description: "Disk space reclaimed in bytes"
@@ -6351,6 +6367,7 @@ paths:
             items:
               type: "object"
               x-go-name: HistoryResponseItem
+              title: "HistoryResponseItem"
               required: [Id, Created, CreatedBy, Tags, Size, Comment]
               properties:
                 Id:
@@ -6557,6 +6574,7 @@ paths:
             type: "array"
             items:
               type: "object"
+              title: "ImageSearchResponseItem"
               properties:
                 description:
                   type: "string"
@@ -6632,6 +6650,7 @@ paths:
           description: "No error"
           schema:
             type: "object"
+            title: "ImagePruneResponse"
             properties:
               ImagesDeleted:
                 description: "Images that were deleted"
@@ -6659,6 +6678,7 @@ paths:
           description: "An identity token was generated successfully."
           schema:
             type: "object"
+            title: "SystemAuthResponse"
             required: [Status]
             properties:
               Status:
@@ -6713,6 +6733,7 @@ paths:
           description: "no error"
           schema:
             type: "object"
+            title: "SystemVersionResponse"
             properties:
               Version:
                 type: "string"
@@ -6869,6 +6890,7 @@ paths:
           description: "no error"
           schema:
             type: "object"
+            title: "SystemEventsResponse"
             properties:
               Type:
                 description: "The type of object emitting the event"
@@ -6948,6 +6970,7 @@ paths:
           description: "no error"
           schema:
             type: "object"
+            title: "SystemDataUsageResponse"
             properties:
               LayersSize:
                 type: "integer"
@@ -7303,7 +7326,12 @@ paths:
           description: "No error"
           schema:
             type: "object"
+            title: "ExecInspectResponse"
             properties:
+              CanRemove:
+                type: "boolean"
+              DetachKeys:
+                type: "string"
               ID:
                 type: "string"
               Running:
@@ -7369,6 +7397,7 @@ paths:
           description: "Summary volume data that matches the query"
           schema:
             type: "object"
+            title: "VolumeListResponse"
             required: [Volumes, Warnings]
             properties:
               Volumes:
@@ -7550,6 +7579,7 @@ paths:
           description: "No error"
           schema:
             type: "object"
+            title: "VolumePruneResponse"
             properties:
               VolumesDeleted:
                 description: "Volumes that were deleted"
@@ -7728,6 +7758,7 @@ paths:
           description: "No error"
           schema:
             type: "object"
+            title: "NetworkCreateResponse"
             properties:
               Id:
                 description: "The ID of the created network."
@@ -7930,6 +7961,7 @@ paths:
           description: "No error"
           schema:
             type: "object"
+            title: "NetworkPruneResponse"
             properties:
               NetworksDeleted:
                 description: "Networks that were deleted"
@@ -7981,6 +8013,7 @@ paths:
             items:
               description: "Describes a permission the user has to accept upon installing the plugin."
               type: "object"
+              title: "PluginPrivilege"
               properties:
                 Name:
                   type: "string"
@@ -8059,6 +8092,7 @@ paths:
             items:
               description: "Describes a permission accepted by the user upon installing the plugin."
               type: "object"
+              title: "PluginPull"
               properties:
                 Name:
                   type: "string"
@@ -8513,6 +8547,7 @@ paths:
           required: true
           schema:
             type: "object"
+            title: "SwarmInitRequest"
             properties:
               ListenAddr:
                 description: "Listen address used for inter-manager communication, as well as determining the networking interface used for the VXLAN Tunnel Endpoint (VTEP). This can either be an address/port combination in the form `192.168.1.1:4567`, or an interface followed by a port number, like `eth0:4567`. If the port number is omitted, the default swarm listening port is used."
@@ -8572,6 +8607,7 @@ paths:
           required: true
           schema:
             type: "object"
+            title: "SwarmJoinRequest"
             properties:
               ListenAddr:
                 description: "Listen address used for inter-manager communication if the node gets promoted to manager, as well as determining the networking interface used for the VXLAN Tunnel Endpoint (VTEP)."
@@ -8682,13 +8718,7 @@ paths:
         200:
           description: "no error"
           schema:
-            type: "object"
-            properties:
-              UnlockKey:
-                description: "The swarm's unlock key."
-                type: "string"
-            example:
-              UnlockKey: "SWMKEY-1-7c37Cc8654o6p38HnroywCi19pllOnGtbdZEgtKxZu8"
+            $ref: "#/definitions/UnlockKey"
         500:
           description: "server error"
           schema:
@@ -8711,13 +8741,7 @@ paths:
           in: "body"
           required: true
           schema:
-            type: "object"
-            properties:
-              UnlockKey:
-                description: "The swarm's unlock key."
-                type: "string"
-            example:
-              UnlockKey: "SWMKEY-1-7c37Cc8654o6p38HnroywCi19pllOnGtbdZEgtKxZu8"
+            $ref: "#/definitions/UnlockKey"
       responses:
         200:
           description: "no error"
@@ -8774,6 +8798,7 @@ paths:
           description: "no error"
           schema:
             type: "object"
+            title: "ServiceCreateResponse"
             properties:
               ID:
                 description: "The ID of the created service."
@@ -9445,13 +9470,7 @@ paths:
         201:
           description: "no error"
           schema:
-            type: "object"
-            properties:
-              ID:
-                description: "The ID of the created secret."
-                type: "string"
-            example:
-              ID: "ktnbjxoalbkvbvedmg1urrz8h"
+            $ref: "#/definitions/IdResponse"
         409:
           description: "name conflicts with an existing object"
           schema:
@@ -9650,13 +9669,7 @@ paths:
         201:
           description: "no error"
           schema:
-            type: "object"
-            properties:
-              ID:
-                description: "The ID of the created config."
-                type: "string"
-            example:
-              ID: "ktnbjxoalbkvbvedmg1urrz8h"
+            $ref: "#/definitions/IdResponse"
         409:
           description: "name conflicts with an existing object"
           schema:
@@ -9802,6 +9815,7 @@ paths:
           schema:
             type: "object"
             x-go-name: DistributionInspect
+            title: "DistributionInspect"
             required: [Descriptor, Platforms]
             properties:
               Descriptor:
