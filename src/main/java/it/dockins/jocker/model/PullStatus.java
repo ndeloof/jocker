@@ -28,9 +28,17 @@ public class PullStatus {
         private int total;
     }
 
+    public boolean isSuccess() {
+        return status.startsWith("Image is up to date")
+            || status.startsWith("Downloaded newer image for");
+    }
+
+
+
     @Override
     public String toString() {
-        final StringBuilder sb = new StringBuilder(id).append(": ");
+        final StringBuilder sb = new StringBuilder();
+        if (id != null) sb.append(id).append(": ");
         sb.append(status);
         if (progress != null) sb.append(' ').append(progress);
         return sb.toString();

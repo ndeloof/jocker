@@ -22,24 +22,24 @@ public class DockerMultiplexedInputStream extends InputStream {
 
     @Override
     public int read() throws IOException {
-        readInternal();
+        if (readInternal() <0) return -1;
         next--;
         return multiplexed.read();
     }
 
     @Override
     public int read(byte[] b, int off, int len) throws IOException {
-        readInternal();
+        if (readInternal() <0) return -1;
         int byteRead = multiplexed.read(b, off, Math.min(next, len));
         next -= byteRead;
         return byteRead;
     }
 
-    private void readInternal() throws IOException {
+    private int readInternal() throws IOException {
         while (next == 0) {
             byte[] header = new byte[8];
             int i = multiplexed.read(header);
-            if (i < 0) return; // EOF
+            if (i < 0) return -1; // EOF
 
             if (i != 8)
                 throw new IOException("Expected 8 bytes application/vnd.docker.raw-stream header, got " + i);
@@ -63,6 +63,7 @@ public class DockerMultiplexedInputStream extends InputStream {
                     throw new IOException("Unexpected application/vnd.docker.raw-stream frame type " + header[0]);
             }
         }
+        return next;
     }
 
 }

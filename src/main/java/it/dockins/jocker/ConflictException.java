@@ -3,12 +3,12 @@ package it.dockins.jocker;
 /**
  * @author <a href="mailto:nicolas.deloof@gmail.com">Nicolas De Loof</a>
  */
-public class NotFoundException extends RuntimeException {
+public class ConflictException extends RuntimeException {
 
-    public NotFoundException() {
+    public ConflictException() {
     }
 
-    public NotFoundException(String message) {
+    public ConflictException(String message) {
         super(message);
     }
 }
