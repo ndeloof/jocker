@@ -1,6 +1,8 @@
 # Jocker, a Java client library for Docker API
 
-Jocker is (yet another) Docker Client library to access Docker API. 
+Jocker is (yet another) Docker Client library to access Docker API.
+
+![logo](jocker.png) 
 
 Primary goals are to "_keep it simple stupid_" and avoid dependency on third-party libraries
 
