@@ -66,4 +66,8 @@ public class DockerMultiplexedInputStream extends InputStream {
         return next;
     }
 
+    @Override
+    public void close() throws IOException {
+        // NOP
+    }
 }
