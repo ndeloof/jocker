@@ -81,7 +81,7 @@ you do something you consider useful :P
   - [ ] [ImageList](https://docs.docker.com/engine/api/v1.32/#operation/ImageList)
   - [ ] [ImageBuild](https://docs.docker.com/engine/api/v1.32/#operation/ImageBuild)
   - [ ] [BuildPrune](https://docs.docker.com/engine/api/v1.32/#operation/BuildPrune)
-  - [ ] [ImageCreate](https://docs.docker.com/engine/api/v1.32/#operation/ImageCreate)
+  - [x] [ImageCreate](https://docs.docker.com/engine/api/v1.32/#operation/ImageCreate) (aka "pull")
   - [ ] [ImageInspect](https://docs.docker.com/engine/api/v1.32/#operation/ImageInspect)
   - [ ] [ImageHistory](https://docs.docker.com/engine/api/v1.32/#operation/ImageHistory)
   - [ ] [ImagePush](https://docs.docker.com/engine/api/v1.32/#operation/ImagePush)

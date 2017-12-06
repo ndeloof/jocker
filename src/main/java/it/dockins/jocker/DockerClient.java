@@ -3,6 +3,7 @@ package it.dockins.jocker;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import it.dockins.jocker.model.AuthConfig;
 import it.dockins.jocker.model.ContainerInspectResponse;
 import it.dockins.jocker.model.ExecConfig;
 import it.dockins.jocker.model.ExecInspectResponse;
@@ -10,6 +11,7 @@ import it.dockins.jocker.model.IdResponse;
 import it.dockins.jocker.model.ContainerSpec;
 import it.dockins.jocker.model.ContainerCreateResponse;
 import it.dockins.jocker.model.ContainerSummary;
+import it.dockins.jocker.model.PullStatus;
 import it.dockins.jocker.model.SystemInfo;
 import it.dockins.jocker.model.ContainersFilters;
 import it.dockins.jocker.model.Streams;
@@ -32,9 +34,11 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
+import java.util.Base64;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Consumer;
 import java.util.zip.GZIPOutputStream;
 
 /**
@@ -216,6 +220,21 @@ public class DockerClient implements Closeable {
     }
 
 
+    /** "pull" flavor of ImageCreate */
+    public void imagePull(String fromImage, AuthConfig authentication, Consumer<PullStatus> consumer) throws IOException {
+        StringBuilder path = new StringBuilder("/v").append(version).append("/images/create?fromImage="+fromImage);
+        Map headers = new HashMap();
+        if (authentication != null) {
+            headers.put("X-Registry-Auth", Base64.getEncoder().encodeToString(gson.toJson(authentication).getBytes(StandardCharsets.UTF_8)));
+        }
+        doPost(path.toString(), "", headers);
+        readChunkedPayload(socket.getInputStream(), s -> {
+            for (String event : s.split("\n")) {
+                consumer.accept(gson.fromJson(event, PullStatus.class));
+            }
+        });
+    }
+
 
     private Response doGET(String path) throws IOException {
         final OutputStream out = socket.getOutputStream();
@@ -226,11 +245,15 @@ public class DockerClient implements Closeable {
         w.println();
         w.flush();
 
-        return getResponse(path);
+        return getResponse();
 
     }
 
     private Response doPost(String path, String payload) throws IOException {
+        return doPost(path, payload, Collections.EMPTY_MAP);
+    }
+
+    private Response doPost(String path, String payload, Map<String, String> headers) throws IOException {
 
         final OutputStream out = socket.getOutputStream();
         final byte[] bytes = payload.getBytes(StandardCharsets.UTF_8);
@@ -240,11 +263,14 @@ public class DockerClient implements Closeable {
         w.println("Host: localhost");
         w.println("Content-Type: application/json; charset=utf-8");
         w.println("Content-Length: "+bytes.length);
+        for (Map.Entry<String, String> header : headers.entrySet()) {
+            w.println(header.getKey() +": "+header.getValue());
+        }
         w.println();
         w.flush();
         out.write(bytes);
 
-        return getResponse(path);
+        return getResponse();
     }
 
     private Response doPut(String path, byte[] bytes) throws IOException {
@@ -260,7 +286,7 @@ public class DockerClient implements Closeable {
         w.flush();
         out.write(bytes);
 
-        return getResponse(path);
+        return getResponse();
     }
 
     private Response doDelete(String path) throws IOException {
@@ -273,15 +299,28 @@ public class DockerClient implements Closeable {
         w.println();
         w.flush();
 
-        return getResponse(path);
+        return getResponse();
     }
 
-    private Response getResponse(String path) throws IOException {
+    private Response getResponse() throws IOException {
 
         final InputStream in = socket.getInputStream();
+        Map<String, String> headers = readHttpResponseHeaders(in);
 
+        if (headers.containsKey("Content-Length")) {
+            return () -> readPayload(in, Integer.parseInt(headers.get("Content-Length")));
+        } else if (headers.containsKey("Transfer-Encoding") && "chunked".equals(headers.get("Transfer-Encoding"))) {
+            return () -> {
+                final StringBuilder s = new StringBuilder();
+                readChunkedPayload(in, s::append);
+                return s.toString();
+            };
+        }
+        return null;
+    }
+
+    private Map<String, String> readHttpResponseHeaders(InputStream in) throws IOException {
         String line = readLine(in);
-        System.out.println(path + " -> " + line);
         int i = line.indexOf(' ');
         int j = line.indexOf(' ',  i+1);
         int responseCode = Integer.parseInt(line.substring(i+1,j));
@@ -304,14 +343,7 @@ public class DockerClient implements Closeable {
             final String value = line.substring(x + 2);
             headers.put(header, value);
         }
-
-        if (headers.containsKey("Content-Length")) {
-            return () -> readPayload(in, Integer.parseInt(headers.get("Content-Length")));
-        } else if (headers.containsKey("Transfer-Encoding") && "chunked".equals(headers.get("Transfer-Encoding"))) {
-            return () -> readChunkedPayload(in);
-        }
-
-        return null;
+        return headers;
     }
 
     private String readLine(final InputStream in) throws IOException {
@@ -333,8 +365,7 @@ public class DockerClient implements Closeable {
             return new String(payload);
     }
 
-    private String readChunkedPayload(final InputStream in) throws IOException {
-            final StringBuilder s = new StringBuilder();
+    private void readChunkedPayload(final InputStream in, Consumer<String> consumer) throws IOException {
             int length = 0;
             do {
                 final String chunk = readLine(in);
@@ -345,9 +376,8 @@ public class DockerClient implements Closeable {
                     read += in.read(data, read, length);
                 }
                 readLine(in); // CTRLF
-                s.append(new String(data, StandardCharsets.UTF_8));
+                consumer.accept(new String(data, StandardCharsets.UTF_8));
             } while(length > 0);
-            return s.toString();
     }
 
     @Override
@@ -360,6 +390,10 @@ public class DockerClient implements Closeable {
 
     public static void main(String[] args) throws Exception {
         final DockerClient client = new DockerClient("unix:///var/run/docker.sock");
+
+        client.imagePull("jenkins/jenkins:lts", null, System.out::println);
+
+        /**
         final String container = client.containerCreate(new ContainerSpec().image("ubuntu").cmd("sleep", "100"), null).getId();
         client.containerStart(container);
         Thread.sleep(1);
@@ -374,7 +408,7 @@ public class DockerClient implements Closeable {
             }
         } catch (IOException e) {
             e.printStackTrace();
-        }
+        }   */
     }
 
 
