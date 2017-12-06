@@ -11,6 +11,7 @@ import it.dockins.jocker.model.IdResponse;
 import it.dockins.jocker.model.ContainerSpec;
 import it.dockins.jocker.model.ContainerCreateResponse;
 import it.dockins.jocker.model.ContainerSummary;
+import it.dockins.jocker.model.Image;
 import it.dockins.jocker.model.PullStatus;
 import it.dockins.jocker.model.SystemInfo;
 import it.dockins.jocker.model.ContainersFilters;
@@ -222,7 +223,7 @@ public class DockerClient implements Closeable {
 
     /** "pull" flavor of ImageCreate */
     public void imagePull(String fromImage, AuthConfig authentication, Consumer<PullStatus> consumer) throws IOException {
-        StringBuilder path = new StringBuilder("/v").append(version).append("/images/create?fromImage="+fromImage);
+        StringBuilder path = new StringBuilder("/v").append(version).append("/images/create?fromImage=").append(fromImage);
         Map headers = new HashMap();
         if (authentication != null) {
             headers.put("X-Registry-Auth", Base64.getEncoder().encodeToString(gson.toJson(authentication).getBytes(StandardCharsets.UTF_8)));
@@ -233,6 +234,13 @@ public class DockerClient implements Closeable {
                 consumer.accept(gson.fromJson(event, PullStatus.class));
             }
         });
+    }
+
+    public Image imageInspect(String image) throws IOException {
+        StringBuilder path = new StringBuilder("/v").append(version).append("/images/").append(image).append("/json");
+        final Response response = doGET(path.toString());
+        final String body = response.getBody();
+        return gson.fromJson(body, Image.class);
     }
 
 
