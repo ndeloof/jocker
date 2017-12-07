@@ -3,9 +3,12 @@ package it.dockins.jocker;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.stream.JsonReader;
+import it.dockins.jocker.io.ChunkedInputStream;
+import it.dockins.jocker.io.DockerMultiplexedInputStream;
+import it.dockins.jocker.io.ContentLengthInputStream;
 import it.dockins.jocker.model.*;
 import org.apache.commons.compress.archivers.ArchiveEntry;
-import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
 import org.apache.commons.compress.utils.IOUtils;
 import org.newsclub.net.unix.AFUNIXSocket;
@@ -18,18 +21,18 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.io.Reader;
 import java.net.Socket;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 import java.util.zip.GZIPOutputStream;
 
 /**
@@ -181,7 +184,7 @@ public class DockerClient implements Closeable {
      */
     public ContainerInspectResponse containerInspect(String container) throws IOException {
         Response r = doGET("/v"+version+"/containers/"+container+"/json");
-        final String body = r.getBody();
+        final Reader body = r.getBody();
         return gson.fromJson(body, ContainerInspectResponse.class);
     }
 
@@ -214,7 +217,7 @@ public class DockerClient implements Closeable {
     public ExecInspectResponse execInspect(String id) throws IOException {
         StringBuilder path = new StringBuilder("/v").append(version).append("/exec/").append(id).append("/json");
         Response r = doGET(path.toString());
-        final String body = r.getBody();
+        final Reader body = r.getBody();
         return gson.fromJson(body, ExecInspectResponse.class);
     }
 
@@ -228,17 +231,19 @@ public class DockerClient implements Closeable {
             headers.put("X-Registry-Auth", Base64.getEncoder().encodeToString(gson.toJson(authentication).getBytes(StandardCharsets.UTF_8)));
         }
         doPost(path.toString(), "", headers);
-        readChunkedPayload(socket.getInputStream(), s -> {
-            for (String event : s.split("\n")) {
-                consumer.accept(gson.fromJson(event, PullStatus.class));
-            }
-        });
+
+        final ChunkedInputStream in = new ChunkedInputStream(socket.getInputStream());
+        final InputStreamReader reader = new InputStreamReader(in);
+
+        while (!in.isEof()) {
+            consumer.accept(gson.fromJson(new JsonReader(reader), PullStatus.class));
+        }
     }
 
     public Image imageInspect(String image) throws IOException {
         StringBuilder path = new StringBuilder("/v").append(version).append("/images/").append(image).append("/json");
         final Response response = doGET(path.toString());
-        final String body = response.getBody();
+        final Reader body = response.getBody();
         return gson.fromJson(body, Image.class);
     }
 
@@ -323,12 +328,8 @@ public class DockerClient implements Closeable {
         if (headers.containsKey("Content-Length")) {
             body = () -> readPayload(in, Integer.parseInt(headers.get("Content-Length")));
         } else if (headers.containsKey("Transfer-Encoding") && "chunked".equals(headers.get("Transfer-Encoding"))) {
-            body = () -> {
-                final StringBuilder s = new StringBuilder();
-                readChunkedPayload(in, s::append);
-                return s.toString();
-            };
-        } else body = () -> { return ""; };
+            body = () -> readChunkedPayload(in);
+        } else body = () -> new InputStreamReader(socket.getInputStream());
 
         if (status / 100 > 2) {
             String message = String.valueOf(status);
@@ -382,28 +383,12 @@ public class DockerClient implements Closeable {
         return s.toString();
     }
 
-    private String readPayload(final InputStream in, int length) throws IOException {
-            byte[] payload = new byte[length];
-            int read = 0;
-            while(read < length) {
-                read += in.read(payload, read, length);
-            }
-            return new String(payload);
+    private Reader readPayload(final InputStream in, int length) throws IOException {
+        return new InputStreamReader(new ContentLengthInputStream(in, length), StandardCharsets.UTF_8);
     }
 
-    private void readChunkedPayload(final InputStream in, Consumer<String> consumer) throws IOException {
-            int length = 0;
-            do {
-                final String chunk = readLine(in);
-                length = Integer.parseInt(chunk, 16);
-                byte[] data = new byte[length];
-                int read = 0;
-                while(read < length) {
-                    read += in.read(data, read, length);
-                }
-                readLine(in); // CTRLF
-                if (length > 0) consumer.accept(new String(data, StandardCharsets.UTF_8));
-            } while(length > 0);
+    private Reader readChunkedPayload(final InputStream in) throws IOException {
+        return new InputStreamReader(new ChunkedInputStream(in), StandardCharsets.UTF_8);
     }
 
     @Override
@@ -417,8 +402,9 @@ public class DockerClient implements Closeable {
     public static void main(String[] args) throws Exception {
         final DockerClient client = new DockerClient("unix:///var/run/docker.sock");
 
-        // client.imagePull("jenkins/jenkins:lts", null, System.out::println);
+        client.imagePull("jenkins/jenkins","lts", null, System.out::println);
 
+        /*
         final String container = client.containerCreate(new ContainerSpec().image("ubuntu").cmd("sleep", "100"), null).getId();
         client.containerStart(container);
         Thread.sleep(1);
@@ -433,11 +419,11 @@ public class DockerClient implements Closeable {
             }
         } catch (IOException e) {
             e.printStackTrace();
-        }
+        }             */
     }
 
 
     interface Response {
-        String getBody() throws IOException;
+        Reader getBody() throws IOException;
     }
 }

@@ -1,4 +1,4 @@
-package it.dockins.jocker;
+package it.dockins.jocker.io;
 
 import java.io.IOException;
 import java.io.InputStream;
