@@ -9,6 +9,7 @@ import it.dockins.jocker.io.DockerMultiplexedInputStream;
 import it.dockins.jocker.io.ContentLengthInputStream;
 import it.dockins.jocker.model.*;
 import org.apache.commons.compress.archivers.ArchiveEntry;
+import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
 import org.apache.commons.compress.utils.IOUtils;
 import org.newsclub.net.unix.AFUNIXSocket;
@@ -186,6 +187,31 @@ public class DockerClient implements Closeable {
     }
 
     /**
+     * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerResize
+     */
+    public void containerResize(String container, int height, int width) throws IOException {
+        StringBuilder uri = new StringBuilder("/v").append(version)
+                .append("/containers/").append(container).append("/resize?h=").append(height).append("&w=").append(width);
+        doPOST(uri.toString());
+    }
+
+    /**
+     * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerChanges
+     */
+    public ContainerChangeResponseItem[] containerChanges(String container, boolean stream) throws IOException {
+        StringBuilder uri = new StringBuilder("/v").append(version)
+                .append("/containers/").append(container).append("/changes");
+        final Response response = doGET(uri.toString());
+        return gson.fromJson(response.getBody(), ContainerChangeResponseItem[].class);
+    }
+
+    /**
+     * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerStats
+     * FIXME no model in swagger definition.
+     */
+    // public void containerStats(String container, boolean stream) throws IOException {
+
+    /**
      * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerKill
      */
     public void containerKill(String container, String signal) throws IOException {
@@ -328,6 +354,14 @@ public class DockerClient implements Closeable {
         }
     }
 
+    /**
+     * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerArchive
+     */
+    public TarArchiveInputStream containerArchive(String container, String path) throws IOException {
+        StringBuilder uri = new StringBuilder("/v").append(version).append("/containers/").append(container).append("/archive?path=").append(path);
+        Response r = doGET(uri.toString());
+        return new TarArchiveInputStream(new ChunkedInputStream(socket.getInputStream()));
+    }
 
     /**
      * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerPrune

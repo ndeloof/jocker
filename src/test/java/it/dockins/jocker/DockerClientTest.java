@@ -13,6 +13,9 @@ import it.dockins.jocker.model.Streams;
 import it.dockins.jocker.model.SystemInfo;
 import it.dockins.jocker.model.SystemVersionResponse;
 import it.dockins.jocker.model.WaitCondition;
+import org.apache.commons.compress.archivers.ArchiveEntry;
+import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
+import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.compress.utils.IOUtils;
 import org.junit.After;
 import org.junit.Assert;
@@ -159,7 +162,6 @@ public class DockerClientTest {
             docker.imagePull("hello-world", null, null, System.out::println);
             String container = docker.containerCreate(new ContainerSpec().image("hello-world").labels(label).tty(true), null).getId();
             docker.containerRename(container, "foo_bar");
-            // FIXME https://github.com/moby/moby/issues/35762
             Assert.assertEquals("/foo_bar", docker.containerInspect(container).getName());
         }
     }
@@ -190,10 +192,12 @@ public class DockerClientTest {
     }
 
     @Test
-    public void copyFileInContainer() throws IOException, InterruptedException {
+    public void containerArchive() throws IOException, InterruptedException {
         try (DockerClient docker = new DockerClient("unix:///var/run/docker.sock")) {
             final String container = createLongRunContainer(docker);
             docker.putContainerFile(container, "/tmp/", false, new File("./pom.xml"));
+
+            /*
             final String exec = docker.containerExec(container, new ExecConfig().cmd(Arrays.asList("ls", "/tmp/pom.xml")).attachStdout(true));
             System.out.println("exec ID: " + exec);
             final Streams streams = docker.execStart(exec, false, false);
@@ -201,6 +205,20 @@ public class DockerClientTest {
             IOUtils.copy(streams.stdout(), output);
             System.out.println("output: " + output);
             Assert.assertFalse(new String(output.toByteArray()).contains("No such file or directory"));
+            */
+
+            final TarArchiveInputStream tar = docker.containerArchive(container, "/tmp/pom.xml");
+            final TarArchiveEntry entry = tar.getNextTarEntry();
+            Assert.assertNotNull(entry);
+            final int size = (int) entry.getSize();
+            byte[] b = new byte[size];
+            int read = 0;
+            while (read < size) {
+                read += tar.read(b, read, size);
+            }
+            Assert.assertNull(tar.getNextTarEntry());
+            final String out = new String(b, UTF_8);
+            Assert.assertTrue(out.contains("a Java client library for Docker API"));
         }
     }
 
