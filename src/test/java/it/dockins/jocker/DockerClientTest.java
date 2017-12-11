@@ -1,6 +1,7 @@
 package it.dockins.jocker;
 
 
+import it.dockins.jocker.model.ContainerInspectResponseState;
 import it.dockins.jocker.model.ContainerSpec;
 import it.dockins.jocker.model.ContainerSummary;
 import it.dockins.jocker.model.ContainerSummaryInner;
@@ -21,6 +22,10 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
+
+import static it.dockins.jocker.model.ContainerInspectResponseState.StatusEnum.EXITED;
+import static it.dockins.jocker.model.ContainerInspectResponseState.StatusEnum.PAUSED;
+import static it.dockins.jocker.model.ContainerInspectResponseState.StatusEnum.RUNNING;
 
 /**
  * @author <a href="mailto:nicolas.deloof@gmail.com">Nicolas De Loof</a>
@@ -71,13 +76,46 @@ public class DockerClientTest {
     }
 
     @Test
+    public void stopAndRestart() throws IOException {
+        try (DockerClient docker = new DockerClient("unix:///var/run/docker.sock")) {
+            final String container = createLongRunContainer(docker);
+            Assert.assertEquals(RUNNING, docker.containerInspect(container).getState().getStatus());
+            docker.containerStop(container, 10);
+            Assert.assertEquals(EXITED, docker.containerInspect(container).getState().getStatus());
+            docker.containerRestart(container, 10);
+            Assert.assertEquals(RUNNING, docker.containerInspect(container).getState().getStatus());
+
+            System.out.println(container);
+        }
+    }
+
+    @Test
+    public void pauseAndUnpause() throws IOException {
+        try (DockerClient docker = new DockerClient("unix:///var/run/docker.sock")) {
+            final String container = createLongRunContainer(docker);
+            Assert.assertEquals(RUNNING, docker.containerInspect(container).getState().getStatus());
+            docker.containerPause(container);
+            Assert.assertEquals(PAUSED, docker.containerInspect(container).getState().getStatus());
+            docker.containerUnpause(container);
+            Assert.assertEquals(RUNNING, docker.containerInspect(container).getState().getStatus());
+            System.out.println(container);
+        }
+    }
+
+    @Test
+    public void kill() throws IOException {
+        try (DockerClient docker = new DockerClient("unix:///var/run/docker.sock")) {
+            final String container = createLongRunContainer(docker);
+            docker.containerKill(container, null);
+            Assert.assertEquals(EXITED, docker.containerInspect(container).getState().getStatus());
+        }
+    }
+
+
+    @Test
     public void copyFileInContainer() throws IOException, InterruptedException {
         try (DockerClient docker = new DockerClient("unix:///var/run/docker.sock")) {
-            docker.imagePull("alpine", null, null, System.out::println);
-            final String container = docker.containerCreate(new ContainerSpec()
-                                           .image("alpine").labels(label).cmd("sleep", "10"), null).getId();
-            docker.containerStart(container);
-            System.out.println("container ID: " + container);
+            final String container = createLongRunContainer(docker);
             docker.putContainerFile(container, "/tmp/", false, new File("./pom.xml"));
             final String exec = docker.containerExec(container, new ExecConfig().cmd(Arrays.asList("ls", "/tmp/pom.xml")).attachStdout(true));
             System.out.println("exec ID: " + exec);
@@ -89,8 +127,14 @@ public class DockerClientTest {
         }
     }
 
-
-
+    private String createLongRunContainer(DockerClient docker) throws IOException {
+        docker.imagePull("alpine", null, null, System.out::println);
+        final String container = docker.containerCreate(new ContainerSpec()
+                                       .image("alpine").labels(label).cmd("sleep", "10"), null).getId();
+        docker.containerStart(container);
+        System.out.println("container ID: " + container);
+        return container;
+    }
 
 
 }

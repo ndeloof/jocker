@@ -166,6 +166,76 @@ public class DockerClient implements Closeable {
     }
 
     /**
+     * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerStop
+     */
+    public void containerStop(String container, int timeout) throws IOException {
+        StringBuilder uri = new StringBuilder("/v").append(version)
+                .append("/containers/").append(container).append("/stop?t=").append(timeout);
+        doPost(uri.toString());
+    }
+
+    /**
+     * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerRestart
+     */
+    public void containerRestart(String container, int timeout) throws IOException {
+        StringBuilder uri = new StringBuilder("/v").append(version)
+                .append("/containers/").append(container).append("/restart?t=").append(timeout);
+        doPost(uri.toString());
+    }
+
+    /**
+     * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerKill
+     */
+    public void containerKill(String container, String signal) throws IOException {
+        StringBuilder uri = new StringBuilder("/v").append(version)
+                .append("/containers/").append(container).append("/kill");
+        if (signal != null) {
+            uri.append("?signal=").append(signal);
+        }
+        doPost(uri.toString());
+    }
+
+    /**
+     * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerKill
+     */
+    public void containerRename(String container, String name) throws IOException {
+        StringBuilder uri = new StringBuilder("/v").append(version)
+                .append("/containers/").append(container).append("/rename?name=").append(name);
+        doPost(uri.toString());
+    }
+
+    /**
+     * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerPause
+     */
+    public void containerPause(String container) throws IOException {
+        StringBuilder uri = new StringBuilder("/v").append(version)
+                .append("/containers/").append(container).append("/pause");
+        doPost(uri.toString());
+    }
+
+    /**
+     * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerUnpause
+     */
+    public void containerUnpause(String container) throws IOException {
+        StringBuilder uri = new StringBuilder("/v").append(version)
+                .append("/containers/").append(container).append("/unpause");
+        doPost(uri.toString());
+    }
+
+    /**
+     * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerWait
+     */
+    public ContainerWaitResponse containerWait(String container, WaitCondition condition) throws IOException {
+        StringBuilder uri = new StringBuilder("/v").append(version)
+                .append("/containers/").append(container).append("/wait");
+        if (condition != null) {
+            uri.append("?condition=").append(condition.getValue());
+        }
+        Response r = doPost(uri.toString());
+        return gson.fromJson(r.getBody(), ContainerWaitResponse.class);
+    }
+
+    /**
      * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerDelete
      */
     public void containerDelete(String container, boolean volumes, boolean links, boolean force) throws IOException {

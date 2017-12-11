@@ -31,7 +31,7 @@ We directly implement HTTP over a `java.net.Socket`. This allows transparent sup
 [junixsocket](https://libraries.io/github/fiken/junixsocket).
 
 We don't claim to offer a full featured HTTP client, just implemented what's required for a Docker API server. HTTP, 
-a plain text protocol, is easy to debug and to implement, with only some limited features required by Docker API.
+a plain value protocol, is easy to debug and to implement, with only some limited features required by Docker API.
 The HTTP client implementation is about ~100 lines of code. Doing so we have full control on how HTTP protocol is
 used, and typically can implement HTTP connection Hijack without any hack.
 
@@ -44,6 +44,23 @@ Copyright 2017 Nicolas De Loof, CloudBees.
 you do something you consider useful :P
 
 ## Supported APIs :
+
+
+### Missing something ?
+
+If you miss _some_ API support in following list, please consider contributing. In most cases, this is just a
+question of implementing few lines of code. API type is already generated from docker's swagger API contract, 
+so you only have to implement the method invocation based on API documentation. 
+
+```java
+public SomeType apiMethod(String param) {
+    StringBuilder path = new StringBuilder("/v").append(version).append("/some/api?param=").append(param);
+    Response r = doGET(path.toString());
+    return gson.fromJson(r.getBody(), SomeType.class);
+}
+
+```
+
 
 ### General purpose 
 
@@ -60,18 +77,18 @@ you do something you consider useful :P
   - [ ] [ContainerExport](https://docs.docker.com/engine/api/v1.32/#operation/ContainerExport)
   - [ ] [ContainerStats](https://docs.docker.com/engine/api/v1.32/#operation/ContainerStats)
   - [ ] [ContainerResize](https://docs.docker.com/engine/api/v1.32/#operation/ContainerResize)
-  - [ ] [ContainerStart](https://docs.docker.com/engine/api/v1.32/#operation/ContainerStart)
-  - [ ] [ContainerStop](https://docs.docker.com/engine/api/v1.32/#operation/ContainerStop)
-  - [ ] [ContainerRestart](https://docs.docker.com/engine/api/v1.32/#operation/ContainerRestart)
-  - [ ] [ContainerKill](https://docs.docker.com/engine/api/v1.32/#operation/ContainerKill)
+  - [x] [ContainerStart](https://docs.docker.com/engine/api/v1.32/#operation/ContainerStart)
+  - [x] [ContainerStop](https://docs.docker.com/engine/api/v1.32/#operation/ContainerStop)
+  - [x] [ContainerRestart](https://docs.docker.com/engine/api/v1.32/#operation/ContainerRestart)
+  - [x] [ContainerKill](https://docs.docker.com/engine/api/v1.32/#operation/ContainerKill)
   - [ ] [ContainerUpdate](https://docs.docker.com/engine/api/v1.32/#operation/ContainerUpdate)
-  - [ ] [ContainerRename](https://docs.docker.com/engine/api/v1.32/#operation/ContainerRename)
-  - [ ] [ContainerPause](https://docs.docker.com/engine/api/v1.32/#operation/ContainerPause)
-  - [ ] [ContainerUnpause](https://docs.docker.com/engine/api/v1.32/#operation/ContainerUnpause)
+  - [x] [ContainerRename](https://docs.docker.com/engine/api/v1.32/#operation/ContainerRename)
+  - [x] [ContainerPause](https://docs.docker.com/engine/api/v1.32/#operation/ContainerPause)
+  - [x] [ContainerUnpause](https://docs.docker.com/engine/api/v1.32/#operation/ContainerUnpause)
   - [ ] [ContainerAttach](https://docs.docker.com/engine/api/v1.32/#operation/ContainerAttach)
   - [ ] [ContainerAttachWebsocket](https://docs.docker.com/engine/api/v1.32/#operation/ContainerAttachWebsocket)
-  - [ ] [ContainerWait](https://docs.docker.com/engine/api/v1.32/#operation/ContainerWait)
-  - [ ] [ContainerDelete](https://docs.docker.com/engine/api/v1.32/#operation/ContainerDelete)
+  - [x] [ContainerWait](https://docs.docker.com/engine/api/v1.32/#operation/ContainerWait)
+  - [x] [ContainerDelete](https://docs.docker.com/engine/api/v1.32/#operation/ContainerDelete)
   - [ ] [ContainerArchiveInfo](https://docs.docker.com/engine/api/v1.32/#operation/ContainerArchiveInfo)
   - [ ] [ContainerArchive](https://docs.docker.com/engine/api/v1.32/#operation/ContainerArchive)
   - [x] [PutContainerArchive](https://docs.docker.com/engine/api/v1.32/#operation/PutContainerArchive)
