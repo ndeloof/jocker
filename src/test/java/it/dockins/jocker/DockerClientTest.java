@@ -19,6 +19,7 @@ import org.junit.Test;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
@@ -108,6 +109,22 @@ public class DockerClientTest {
             final String container = createLongRunContainer(docker);
             docker.containerKill(container, null);
             Assert.assertEquals(EXITED, docker.containerInspect(container).getState().getStatus());
+        }
+    }
+
+    @Test
+    public void logs() throws IOException {
+        try (DockerClient docker = new DockerClient("unix:///var/run/docker.sock")) {
+            docker.imagePull("hello-world", null, null, System.out::println);
+            String container = docker.containerCreate(new ContainerSpec().image("hello-world").labels(label).tty(true), null).getId();
+            docker.containerStart(container);
+
+            InputStream in = docker.containerLogs(container, true, true, false, true, 0, null);
+            final ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            IOUtils.copy(in, bos);
+            final String output = bos.toString();
+            System.out.println("output: " + output);
+            Assert.assertTrue(output.contains("Hello from Docker!\r\nThis message shows that your installation appears to be working correctly."));
         }
     }
 

@@ -77,7 +77,6 @@ public class ContainerSpec extends ContainerConfig {
         return this;
     }
 
-
     @Override
     public ContainerSpec hostname(String hostname) {
         return (ContainerSpec) super.hostname(hostname);
@@ -86,6 +85,11 @@ public class ContainerSpec extends ContainerConfig {
     @Override
     public ContainerSpec domainname(String domainname) {
         return (ContainerSpec) super.domainname(domainname);
+    }
+
+    @Override
+    public ContainerSpec user(String user) {
+        return (ContainerSpec) super.user(user);
     }
 
     @Override
@@ -114,8 +118,18 @@ public class ContainerSpec extends ContainerConfig {
     }
 
     @Override
+    public ContainerSpec tty(Boolean tty) {
+        return (ContainerSpec) super.tty(tty);
+    }
+
+    @Override
     public ContainerSpec openStdin(Boolean openStdin) {
         return (ContainerSpec) super.openStdin(openStdin);
+    }
+
+    @Override
+    public ContainerSpec stdinOnce(Boolean stdinOnce) {
+        return (ContainerSpec) super.stdinOnce(stdinOnce);
     }
 
     @Override
@@ -149,6 +163,11 @@ public class ContainerSpec extends ContainerConfig {
     }
 
     @Override
+    public ContainerSpec workingDir(String workingDir) {
+        return (ContainerSpec) super.workingDir(workingDir);
+    }
+
+    @Override
     public ContainerSpec networkDisabled(Boolean networkDisabled) {
         return (ContainerSpec) super.networkDisabled(networkDisabled);
     }
@@ -167,7 +186,6 @@ public class ContainerSpec extends ContainerConfig {
     public ContainerSpec addOnBuildItem(String onBuildItem) {
         return (ContainerSpec) super.addOnBuildItem(onBuildItem);
     }
-
     @Override
     public ContainerSpec labels(Map<String, String> labels) {
         return (ContainerSpec) super.labels(labels);
@@ -176,6 +194,21 @@ public class ContainerSpec extends ContainerConfig {
     @Override
     public ContainerSpec putLabelsItem(String key, String labelsItem) {
         return (ContainerSpec) super.putLabelsItem(key, labelsItem);
+    }
+
+    @Override
+    public ContainerSpec stopSignal(String stopSignal) {
+        return (ContainerSpec) super.stopSignal(stopSignal);
+    }
+
+    @Override
+    public ContainerSpec stopTimeout(Integer stopTimeout) {
+        return (ContainerSpec) super.stopTimeout(stopTimeout);
+    }
+
+    @Override
+    public ContainerSpec shell(List<String> shell) {
+        return (ContainerSpec) super.shell(shell);
     }
 
     @Override

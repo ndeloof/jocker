@@ -152,7 +152,7 @@ public class DockerClient implements Closeable {
         }
 
         String spec = gson.toJson(containerConfig);
-        Response r = doPost(path.toString(), spec);
+        Response r = doPOST(path.toString(), spec);
         return gson.fromJson(r.getBody(), ContainerCreateResponse.class);
     }
 
@@ -162,7 +162,7 @@ public class DockerClient implements Closeable {
     public void containerStart(String container) throws IOException {
         StringBuilder uri = new StringBuilder("/v").append(version)
                 .append("/containers/").append(container).append("/start");
-        doPost(uri.toString());
+        doPOST(uri.toString());
     }
 
     /**
@@ -171,7 +171,7 @@ public class DockerClient implements Closeable {
     public void containerStop(String container, int timeout) throws IOException {
         StringBuilder uri = new StringBuilder("/v").append(version)
                 .append("/containers/").append(container).append("/stop?t=").append(timeout);
-        doPost(uri.toString());
+        doPOST(uri.toString());
     }
 
     /**
@@ -180,7 +180,7 @@ public class DockerClient implements Closeable {
     public void containerRestart(String container, int timeout) throws IOException {
         StringBuilder uri = new StringBuilder("/v").append(version)
                 .append("/containers/").append(container).append("/restart?t=").append(timeout);
-        doPost(uri.toString());
+        doPOST(uri.toString());
     }
 
     /**
@@ -192,7 +192,7 @@ public class DockerClient implements Closeable {
         if (signal != null) {
             uri.append("?signal=").append(signal);
         }
-        doPost(uri.toString());
+        doPOST(uri.toString());
     }
 
     /**
@@ -201,7 +201,7 @@ public class DockerClient implements Closeable {
     public void containerRename(String container, String name) throws IOException {
         StringBuilder uri = new StringBuilder("/v").append(version)
                 .append("/containers/").append(container).append("/rename?name=").append(name);
-        doPost(uri.toString());
+        doPOST(uri.toString());
     }
 
     /**
@@ -210,7 +210,7 @@ public class DockerClient implements Closeable {
     public void containerPause(String container) throws IOException {
         StringBuilder uri = new StringBuilder("/v").append(version)
                 .append("/containers/").append(container).append("/pause");
-        doPost(uri.toString());
+        doPOST(uri.toString());
     }
 
     /**
@@ -219,7 +219,7 @@ public class DockerClient implements Closeable {
     public void containerUnpause(String container) throws IOException {
         StringBuilder uri = new StringBuilder("/v").append(version)
                 .append("/containers/").append(container).append("/unpause");
-        doPost(uri.toString());
+        doPOST(uri.toString());
     }
 
     /**
@@ -231,7 +231,7 @@ public class DockerClient implements Closeable {
         if (condition != null) {
             uri.append("?condition=").append(condition.getValue());
         }
-        Response r = doPost(uri.toString());
+        Response r = doPOST(uri.toString());
         return gson.fromJson(r.getBody(), ContainerWaitResponse.class);
     }
 
@@ -245,7 +245,22 @@ public class DockerClient implements Closeable {
                 .append("&v=").append(volumes)
                 .append("&link=").append(links);
 
-        doDelete(uri.toString());
+        doDELETE(uri.toString());
+    }
+
+    public InputStream containerLogs(String container, boolean follow, boolean stdout, boolean stderr, boolean timestamps, int since, String tail) throws IOException {
+        StringBuilder uri = new StringBuilder("/v").append(version)
+                .append("/containers/").append(container).append("/logs")
+                .append("?follow=").append(follow)
+                .append("&stdout=").append(stdout)
+                .append("&stderr=").append(stderr)
+                .append("&since=").append(since);
+        if (tail != null) {
+            uri.append("&tail=").append(tail);
+        }
+
+        Response r = doGET(uri.toString());
+        return new ChunkedInputStream(socket.getInputStream());
     }
 
 
@@ -261,14 +276,14 @@ public class DockerClient implements Closeable {
     public String containerExec(String container, ExecConfig execConfig) throws IOException {
         StringBuilder path = new StringBuilder("/v").append(version).append("/containers/").append(container).append("/exec");
         String spec = gson.toJson(execConfig);
-        Response r = doPost(path.toString(), spec);
+        Response r = doPOST(path.toString(), spec);
         return gson.fromJson(r.getBody(), IdResponse.class).getId();
     }
 
 
     public Streams execStart(String id, boolean detach, boolean tty) throws IOException {
         StringBuilder path = new StringBuilder("/v").append(version).append("/exec/").append(id).append("/start");
-        doPost(path.toString(), "{\"Detach\": "+detach+", \"Tty\": "+tty+"}");
+        doPOST(path.toString(), "{\"Detach\": "+detach+", \"Tty\": "+tty+"}");
         if (detach) return null;
         return new Streams() {
 
@@ -300,7 +315,7 @@ public class DockerClient implements Closeable {
         if (authentication != null) {
             headers.put("X-Registry-Auth", Base64.getEncoder().encodeToString(gson.toJson(authentication).getBytes(StandardCharsets.UTF_8)));
         }
-        doPost(path.toString(), "", headers);
+        doPOST(path.toString(), "", headers);
 
         final ChunkedInputStream in = new ChunkedInputStream(socket.getInputStream());
         final InputStreamReader reader = new InputStreamReader(in);
@@ -331,15 +346,15 @@ public class DockerClient implements Closeable {
 
     }
 
-    private Response doPost(String path) throws IOException {
-        return doPost(path, "");
+    private Response doPOST(String path) throws IOException {
+        return doPOST(path, "");
     }
 
-    private Response doPost(String path, String payload) throws IOException {
-        return doPost(path, payload, Collections.EMPTY_MAP);
+    private Response doPOST(String path, String payload) throws IOException {
+        return doPOST(path, payload, Collections.EMPTY_MAP);
     }
 
-    private Response doPost(String path, String payload, Map<String, String> headers) throws IOException {
+    private Response doPOST(String path, String payload, Map<String, String> headers) throws IOException {
 
         final OutputStream out = socket.getOutputStream();
         final byte[] bytes = payload.getBytes(StandardCharsets.UTF_8);
@@ -375,7 +390,7 @@ public class DockerClient implements Closeable {
         return getResponse();
     }
 
-    private Response doDelete(String path) throws IOException {
+    private Response doDELETE(String path) throws IOException {
 
         final OutputStream out = socket.getOutputStream();
 

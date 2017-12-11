@@ -72,7 +72,7 @@ public SomeType apiMethod(String param) {
   - [x] [ContainerCreate](https://docs.docker.com/engine/api/v1.32/#operation/ContainerCreate)
   - [x] [ContainerInspect](https://docs.docker.com/engine/api/v1.32/#operation/ContainerInspect)
   - [ ] [ContainerTop](https://docs.docker.com/engine/api/v1.32/#operation/ContainerTop)
-  - [ ] [ContainerLogs](https://docs.docker.com/engine/api/v1.32/#operation/ContainerLogs)
+  - [x] [ContainerLogs](https://docs.docker.com/engine/api/v1.32/#operation/ContainerLogs)
   - [ ] [ContainerChanges](https://docs.docker.com/engine/api/v1.32/#operation/ContainerChanges)
   - [ ] [ContainerExport](https://docs.docker.com/engine/api/v1.32/#operation/ContainerExport)
   - [ ] [ContainerStats](https://docs.docker.com/engine/api/v1.32/#operation/ContainerStats)
