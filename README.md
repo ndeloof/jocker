@@ -15,8 +15,8 @@ Jocker has been created in the context of [Jenkins Docker plugin](https://wiki.j
 development. Third party dependencies are constrained in Jenkins by core dependencies, introducing various classpath
 issues.
 
-Also, such helper libraries indeed demonstrated to have issues supporting some uncommon HTTP usage in docker APi, like 
-Hijacked HTTP connection to attach stdin/stdout or the `/var/run/docker.sock` Unix Domain Socket.  
+Also, such helper libraries demonstrated to have issues supporting some uncommon HTTP usage in docker APi, like 
+Hijacked HTTP connection to attach stdin/stdout in interactive mode, or the `/var/run/docker.sock` Unix Domain Socket.  
 
 For JSON (un)marshalling we rely on [Google Gson](https://github.com/google/gson) as a tiny (standalone), simple and 
 efficient JSON library. 
@@ -25,10 +25,11 @@ efficient JSON library.
 ## KISS (Keep It Simple Stupid)
 
 API model is generated from the [Docker official swagger specification](https://docs.docker.com/engine/api/v1.32/#).
+Some pull-requests have been made to help improve this API spec and ensure we get a clean model generated.
 For the few corner cases where the generated model doesn't offer a nice API, we maintain some dedicated model classes. 
 
 We directly implement HTTP over a `java.net.Socket`. This allows transparent support for Unix Domain Socket thanks to 
-[junixsocket](https://libraries.io/github/fiken/junixsocket).
+[junixsocket](https://libraries.io/github/fiken/junixsocket).  
 
 We don't claim to offer a full featured HTTP client, just implemented what's required for a Docker API server. HTTP, 
 a plain value protocol, is easy to debug and to implement, with only some limited features required by Docker API.
@@ -43,8 +44,16 @@ Copyright 2017 Nicolas De Loof, CloudBees.
 **tl;dr:** You're free to use this code, make any changes you need, have fun with it. Contributions are welcome if 
 you do something you consider useful :P
 
-## Supported APIs :
 
+## Future plans
+
+* implement _all_ APIs
+* a fluent client for those who prefer this programming model
+* use java.nio Channels and jnr-unixsocket to rely on non-blocking I/O
+* conquer the world
+
+
+## Supported APIs :
 
 ### Missing something ?
 
