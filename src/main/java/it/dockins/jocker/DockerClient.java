@@ -15,6 +15,7 @@ import org.newsclub.net.unix.AFUNIXSocket;
 import org.newsclub.net.unix.AFUNIXSocketAddress;
 
 import javax.net.ssl.SSLContext;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.File;
@@ -27,13 +28,14 @@ import java.io.PrintWriter;
 import java.io.Reader;
 import java.net.Socket;
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.zip.GZIPOutputStream;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * Implement <a href="https://docs.docker.com/engine/api/v1.32">Docker API</a> using a plain old java
@@ -122,7 +124,7 @@ public class DockerClient implements Closeable {
                 .append("?path=").append(path)
                 .append("&noOverwriteDirNonDir=").append(noOverwriteDirNonDir);
 
-        doPut(uri.toString(), tar);
+        doPUT(uri.toString(), tar);
     }
 
 
@@ -263,6 +265,34 @@ public class DockerClient implements Closeable {
         return new ChunkedInputStream(socket.getInputStream());
     }
 
+    public Streams containerAttach(String id, boolean stdin, boolean stdout, boolean stderr, boolean stream, boolean logs, String detachKeys) throws IOException {
+
+        StringBuilder path = new StringBuilder("/v").append(version).append("/containers/").append(id).append("/attach")
+                .append("?stdin=").append(stdin)
+                .append("&stdout=").append(stdout)
+                .append("&stderr=").append(stderr)
+                .append("&stream=").append(stream)
+                .append("&logs=").append(logs);
+        if (detachKeys != null) {
+            path.append("&detachKeys=").append(detachKeys);
+        }
+
+        final Response response = doPOST(path.toString());
+        return new Streams() {
+
+            @Override
+            public InputStream stdout() throws IOException {
+                // FIXME https://github.com/moby/moby/issues/35761
+                return new DockerMultiplexedInputStream(socket.getInputStream());
+            }
+
+            @Override
+            public OutputStream stdin() throws IOException {
+                if (!stdin) throw new IOException("stdin is not attached");
+                return socket.getOutputStream();
+            }
+        };
+    }
 
     /**
      * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerInspect
@@ -273,22 +303,53 @@ public class DockerClient implements Closeable {
         return gson.fromJson(body, ContainerInspectResponse.class);
     }
 
+    /**
+     * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerExec
+     */
     public String containerExec(String container, ExecConfig execConfig) throws IOException {
-        StringBuilder path = new StringBuilder("/v").append(version).append("/containers/").append(container).append("/exec");
+        StringBuilder uri = new StringBuilder("/v").append(version).append("/containers/").append(container).append("/exec");
         String spec = gson.toJson(execConfig);
-        Response r = doPOST(path.toString(), spec);
+        Response r = doPOST(uri.toString(), spec);
         return gson.fromJson(r.getBody(), IdResponse.class).getId();
     }
 
+    /**
+     * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerArchiveInfo
+     */
+    public FileSystemHeaders containerArchiveInfo(String container, String path) throws IOException {
+        StringBuilder uri = new StringBuilder("/v").append(version).append("/containers/").append(container).append("/archive?path=").append(path);
+        Response r = doHEAD(uri.toString());
+        final String stats = r.getHeaders().get("X-Docker-Container-Path-Stat");
+        final byte[] json = Base64.getDecoder().decode(stats.getBytes(UTF_8));
+
+        try (InputStream stream = new ByteArrayInputStream(json);
+             Reader reader = new InputStreamReader(stream)) {
+            return gson.fromJson(reader, FileSystemHeaders.class);
+        }
+    }
+
+
+    /**
+     * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerPrune
+     */
+    public ContainerPruneResponse containerPrune(ContainersFilters filters) throws IOException {
+        StringBuilder path = new StringBuilder("/v").append(version).append("/containers/prune");
+        if (filters != null) {
+            path.append("?filters=").append(gson.toJson(filters));
+        }
+        Response r = doPOST(path.toString());
+        return gson.fromJson(r.getBody(), ContainerPruneResponse.class);
+    }
 
     public Streams execStart(String id, boolean detach, boolean tty) throws IOException {
         StringBuilder path = new StringBuilder("/v").append(version).append("/exec/").append(id).append("/start");
-        doPOST(path.toString(), "{\"Detach\": "+detach+", \"Tty\": "+tty+"}");
+        final Response response = doPOST(path.toString(), "{\"Detach\": " + detach + ", \"Tty\": " + tty + "}");
         if (detach) return null;
         return new Streams() {
 
             @Override
             public InputStream stdout() throws IOException {
+                // FIXME https://github.com/moby/moby/issues/35761
                 return new DockerMultiplexedInputStream(socket.getInputStream());
             }
 
@@ -313,7 +374,7 @@ public class DockerClient implements Closeable {
         StringBuilder path = new StringBuilder("/v").append(version).append("/images/create?fromImage=").append(image).append("&tag=").append(tag);
         Map headers = new HashMap();
         if (authentication != null) {
-            headers.put("X-Registry-Auth", Base64.getEncoder().encodeToString(gson.toJson(authentication).getBytes(StandardCharsets.UTF_8)));
+            headers.put("X-Registry-Auth", Base64.getEncoder().encodeToString(gson.toJson(authentication).getBytes(UTF_8)));
         }
         doPOST(path.toString(), "", headers);
 
@@ -357,7 +418,7 @@ public class DockerClient implements Closeable {
     private Response doPOST(String path, String payload, Map<String, String> headers) throws IOException {
 
         final OutputStream out = socket.getOutputStream();
-        final byte[] bytes = payload.getBytes(StandardCharsets.UTF_8);
+        final byte[] bytes = payload.getBytes(UTF_8);
 
         final PrintWriter w = new PrintWriter(out);
         w.println("POST " + path + " HTTP/1.1");
@@ -374,7 +435,19 @@ public class DockerClient implements Closeable {
         return getResponse();
     }
 
-    private Response doPut(String path, byte[] bytes) throws IOException {
+    private Response doHEAD(String path) throws IOException {
+
+        final OutputStream out = socket.getOutputStream();
+        final PrintWriter w = new PrintWriter(out);
+        w.println("HEAD " + path + " HTTP/1.1");
+        w.println("Host: localhost");
+        w.println();
+        w.flush();
+        return getResponse();
+    }
+
+
+    private Response doPUT(String path, byte[] bytes) throws IOException {
 
         final OutputStream out = socket.getOutputStream();
 
@@ -409,18 +482,24 @@ public class DockerClient implements Closeable {
         int status = readHttpStatus(in);
         Map<String, String> headers = readHttpResponseHeaders(in);
 
-        Response body;
+        Reader body;
         if (headers.containsKey("Content-Length")) {
-            body = () -> readPayload(in, Integer.parseInt(headers.get("Content-Length")));
+            final int length = Integer.parseInt(headers.get("Content-Length"));
+            body = new InputStreamReader(new ContentLengthInputStream(in, length), UTF_8);
         } else if (headers.containsKey("Transfer-Encoding") && "chunked".equals(headers.get("Transfer-Encoding"))) {
-            body = () -> readChunkedPayload(in);
-        } else body = () -> new InputStreamReader(socket.getInputStream());
+            body = new InputStreamReader(new ChunkedInputStream(in), UTF_8);
+        } else {
+            body = new InputStreamReader(socket.getInputStream());
+        }
+
+        Response response = new Response(headers, body);
+
 
         if (status / 100 > 2) {
             String message = String.valueOf(status);
             final String type = headers.get("Content-Type");
             if (type != null && type.startsWith("application/json")) {
-                message = gson.fromJson(body.getBody(), ErrorDetail.class).getMessage();
+                message = gson.fromJson(response.getBody(), ErrorDetail.class).getMessage();
             }
             if (status == 404) {
                 throw new NotFoundException(message);
@@ -431,7 +510,7 @@ public class DockerClient implements Closeable {
             throw new IOException(message);
         }
 
-        return body;
+        return response;
     }
 
     private Map<String, String> readHttpResponseHeaders(InputStream in) throws IOException {
@@ -469,11 +548,11 @@ public class DockerClient implements Closeable {
     }
 
     private Reader readPayload(final InputStream in, int length) throws IOException {
-        return new InputStreamReader(new ContentLengthInputStream(in, length), StandardCharsets.UTF_8);
+        return new InputStreamReader(new ContentLengthInputStream(in, length), UTF_8);
     }
 
     private Reader readChunkedPayload(final InputStream in) throws IOException {
-        return new InputStreamReader(new ChunkedInputStream(in), StandardCharsets.UTF_8);
+        return new InputStreamReader(new ChunkedInputStream(in), UTF_8);
     }
 
     @Override
@@ -508,7 +587,22 @@ public class DockerClient implements Closeable {
     }
 
 
-    interface Response {
-        Reader getBody() throws IOException;
+    public static class Response {
+        private final Reader body;
+
+        private final Map<String,String> headers;
+
+        public Response(Map<String, String> headers, Reader body) {
+            this.body = body;
+            this.headers = headers;
+        }
+
+        public Reader getBody() {
+            return body;
+        }
+
+        public Map<String, String> getHeaders() {
+            return headers;
+        }
     }
 }

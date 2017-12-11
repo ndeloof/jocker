@@ -2,24 +2,31 @@ package it.dockins.jocker;
 
 
 import it.dockins.jocker.model.ContainerInspectResponseState;
+import it.dockins.jocker.model.ContainerPruneResponse;
 import it.dockins.jocker.model.ContainerSpec;
 import it.dockins.jocker.model.ContainerSummary;
 import it.dockins.jocker.model.ContainerSummaryInner;
 import it.dockins.jocker.model.ContainersFilters;
 import it.dockins.jocker.model.ExecConfig;
+import it.dockins.jocker.model.FileSystemHeaders;
 import it.dockins.jocker.model.Streams;
 import it.dockins.jocker.model.SystemInfo;
 import it.dockins.jocker.model.SystemVersionResponse;
+import it.dockins.jocker.model.WaitCondition;
 import org.apache.commons.compress.utils.IOUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
@@ -27,6 +34,7 @@ import java.util.Map;
 import static it.dockins.jocker.model.ContainerInspectResponseState.StatusEnum.EXITED;
 import static it.dockins.jocker.model.ContainerInspectResponseState.StatusEnum.PAUSED;
 import static it.dockins.jocker.model.ContainerInspectResponseState.StatusEnum.RUNNING;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * @author <a href="mailto:nicolas.deloof@gmail.com">Nicolas De Loof</a>
@@ -77,7 +85,7 @@ public class DockerClientTest {
     }
 
     @Test
-    public void stopAndRestart() throws IOException {
+    public void containerStopAndRestart() throws IOException {
         try (DockerClient docker = new DockerClient("unix:///var/run/docker.sock")) {
             final String container = createLongRunContainer(docker);
             Assert.assertEquals(RUNNING, docker.containerInspect(container).getState().getStatus());
@@ -91,7 +99,7 @@ public class DockerClientTest {
     }
 
     @Test
-    public void pauseAndUnpause() throws IOException {
+    public void containerPauseAndUnpause() throws IOException {
         try (DockerClient docker = new DockerClient("unix:///var/run/docker.sock")) {
             final String container = createLongRunContainer(docker);
             Assert.assertEquals(RUNNING, docker.containerInspect(container).getState().getStatus());
@@ -104,7 +112,7 @@ public class DockerClientTest {
     }
 
     @Test
-    public void kill() throws IOException {
+    public void containerKill() throws IOException {
         try (DockerClient docker = new DockerClient("unix:///var/run/docker.sock")) {
             final String container = createLongRunContainer(docker);
             docker.containerKill(container, null);
@@ -113,7 +121,7 @@ public class DockerClientTest {
     }
 
     @Test
-    public void logs() throws IOException {
+    public void containerLogs() throws IOException {
         try (DockerClient docker = new DockerClient("unix:///var/run/docker.sock")) {
             docker.imagePull("hello-world", null, null, System.out::println);
             String container = docker.containerCreate(new ContainerSpec().image("hello-world").labels(label).tty(true), null).getId();
@@ -128,6 +136,58 @@ public class DockerClientTest {
         }
     }
 
+    @Test
+    public void containerAttach() throws IOException {
+        try (DockerClient docker = new DockerClient("unix:///var/run/docker.sock")) {
+            docker.imagePull("alpine", null, null, System.out::println);
+            String container = docker.containerCreate(new ContainerSpec().image("alpine").labels(label)
+                    .attachStdin(true).attachStdout(true).cmd("ping", "localhost"), null).getId();
+
+            docker.containerStart(container);
+            final Streams streams = docker.containerAttach(container, true, true, false, true, true, null);
+
+            final BufferedReader reader = new BufferedReader(new InputStreamReader(streams.stdout()));
+            String output = reader.readLine();
+            System.out.println("output: " + output);
+            Assert.assertTrue(output.startsWith("PING localhost (127.0.0.1):"));
+        }
+    }
+
+    @Test
+    public void containerRename() throws IOException {
+        try (DockerClient docker = new DockerClient("unix:///var/run/docker.sock")) {
+            docker.imagePull("hello-world", null, null, System.out::println);
+            String container = docker.containerCreate(new ContainerSpec().image("hello-world").labels(label).tty(true), null).getId();
+            docker.containerRename(container, "foo_bar");
+            // FIXME https://github.com/moby/moby/issues/35762
+            Assert.assertEquals("/foo_bar", docker.containerInspect(container).getName());
+        }
+    }
+
+
+    @Test
+    public void containerPrune() throws IOException {
+        try (DockerClient docker = new DockerClient("unix:///var/run/docker.sock")) {
+            docker.imagePull("hello-world", null, null, System.out::println);
+            String container = docker.containerCreate(new ContainerSpec().image("hello-world").labels(label).tty(true), null).getId();
+            docker.containerStart(container);
+            docker.containerWait(container, WaitCondition.NEXT_EXIT);
+
+            final ContainerPruneResponse response = docker.containerPrune(new ContainersFilters().label("it.dockins.jocker=test"));
+            Assert.assertTrue(response.getContainersDeleted().contains(container));
+        }
+    }
+
+    @Test
+    public void containerArchiveInfo() throws IOException {
+        try (DockerClient docker = new DockerClient("unix:///var/run/docker.sock")) {
+            docker.imagePull("hello-world", null, null, System.out::println);
+            String container = docker.containerCreate(new ContainerSpec().image("hello-world").labels(label), null).getId();
+            final FileSystemHeaders x = docker.containerArchiveInfo(container, "/hello");
+            System.out.println(x);
+            Assert.assertEquals("hello", x.getName());
+        }
+    }
 
     @Test
     public void copyFileInContainer() throws IOException, InterruptedException {

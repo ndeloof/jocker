@@ -94,15 +94,15 @@ public SomeType apiMethod(String param) {
   - [x] [ContainerRename](https://docs.docker.com/engine/api/v1.32/#operation/ContainerRename)
   - [x] [ContainerPause](https://docs.docker.com/engine/api/v1.32/#operation/ContainerPause)
   - [x] [ContainerUnpause](https://docs.docker.com/engine/api/v1.32/#operation/ContainerUnpause)
-  - [ ] [ContainerAttach](https://docs.docker.com/engine/api/v1.32/#operation/ContainerAttach)
+  - [x] [ContainerAttach](https://docs.docker.com/engine/api/v1.32/#operation/ContainerAttach)
   - [ ] [ContainerAttachWebsocket](https://docs.docker.com/engine/api/v1.32/#operation/ContainerAttachWebsocket)
   - [x] [ContainerWait](https://docs.docker.com/engine/api/v1.32/#operation/ContainerWait)
   - [x] [ContainerDelete](https://docs.docker.com/engine/api/v1.32/#operation/ContainerDelete)
   - [ ] [ContainerArchiveInfo](https://docs.docker.com/engine/api/v1.32/#operation/ContainerArchiveInfo)
   - [ ] [ContainerArchive](https://docs.docker.com/engine/api/v1.32/#operation/ContainerArchive)
   - [x] [PutContainerArchive](https://docs.docker.com/engine/api/v1.32/#operation/PutContainerArchive)
-  - [ ] [ContainerPrune](https://docs.docker.com/engine/api/v1.32/#operation/ContainerPrune)
-  - [ ] [ContainerAttach](https://docs.docker.com/engine/api/v1.32/#operation/ContainerAttach)
+  - [x] [ContainerPrune](https://docs.docker.com/engine/api/v1.32/#operation/ContainerPrune)
+  - [x] [ContainerAttach](https://docs.docker.com/engine/api/v1.32/#operation/ContainerAttach)
          
 ### Images
 
