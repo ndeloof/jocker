@@ -70,7 +70,6 @@ public SomeType apiMethod(String param) {
 
 ```
 
-
 ### General purpose 
 
   - [x] [SystemInfo](https://docs.docker.com/engine/api/v1.32/#operation/SystemInfo)
@@ -107,7 +106,7 @@ public SomeType apiMethod(String param) {
 ### Images
 
   - [ ] [ImageList](https://docs.docker.com/engine/api/v1.32/#operation/ImageList)
-  - [ ] [ImageBuild](https://docs.docker.com/engine/api/v1.32/#operation/ImageBuild)
+  - [x] [ImageBuild](https://docs.docker.com/engine/api/v1.32/#operation/ImageBuild)
   - [ ] [BuildPrune](https://docs.docker.com/engine/api/v1.32/#operation/BuildPrune)
   - [x] [ImageCreate](https://docs.docker.com/engine/api/v1.32/#operation/ImageCreate) (aka "pull")
   - [x] [ImageInspect](https://docs.docker.com/engine/api/v1.32/#operation/ImageInspect)
@@ -166,3 +165,23 @@ TODO
 
 TODO
 
+
+## Debug / Reverse engineering
+
+There's few places where the docker API is not well documented, for sample 
+[ImageBuild](https://docs.docker.com/engine/api/v1.32/#operation/ImageBuild) operation documentation doesn't
+tell us much about the outputstream.
+In such circumstances we will have to reverse-engineer the docker API. Two (complementary) options here :
+
+1. read [source code](https://github.com/moby/moby/tree/master/api/server). If you're not familiar with Go 
+this might be a bit challenging, but one learns a lot about the API looking at this.
+1. analyze HTTP traffic produced by docker CLI. For this purpose I use `dockins/dockersock` docker image to 
+expose my docker4mac socket in plain HTTP :
+
+`docker run -it -v /var/run/docker.sock:/var/run/docker.sock -p 2375:2375 dockins/dockersock`
+
+Then I use [Wireshark](https://www.wireshark.org/) with filter `tcp.port=2375` to capture HTTP frames sent by client 
+and daemon response. 
+
+
+ 

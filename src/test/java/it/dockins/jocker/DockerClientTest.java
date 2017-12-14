@@ -1,6 +1,7 @@
 package it.dockins.jocker;
 
 
+import it.dockins.jocker.io.TarInputStreamBuilder;
 import it.dockins.jocker.model.ContainerInspectResponseState;
 import it.dockins.jocker.model.ContainerPruneResponse;
 import it.dockins.jocker.model.ContainerSpec;
@@ -25,6 +26,7 @@ import org.junit.Test;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -197,16 +199,6 @@ public class DockerClientTest {
             final String container = createLongRunContainer(docker);
             docker.putContainerFile(container, "/tmp/", false, new File("./pom.xml"));
 
-            /*
-            final String exec = docker.containerExec(container, new ExecConfig().cmd(Arrays.asList("ls", "/tmp/pom.xml")).attachStdout(true));
-            System.out.println("exec ID: " + exec);
-            final Streams streams = docker.execStart(exec, false, false);
-            final ByteArrayOutputStream output = new ByteArrayOutputStream();
-            IOUtils.copy(streams.stdout(), output);
-            System.out.println("output: " + output);
-            Assert.assertFalse(new String(output.toByteArray()).contains("No such file or directory"));
-            */
-
             final TarArchiveInputStream tar = docker.containerArchive(container, "/tmp/pom.xml");
             final TarArchiveEntry entry = tar.getNextTarEntry();
             Assert.assertNotNull(entry);
@@ -219,6 +211,20 @@ public class DockerClientTest {
             Assert.assertNull(tar.getNextTarEntry());
             final String out = new String(b, UTF_8);
             Assert.assertTrue(out.contains("a Java client library for Docker API"));
+        }
+    }
+
+
+    @Test
+    public void imageBuild() throws IOException {
+
+        final InputStream context = new TarInputStreamBuilder()
+            .add("Dockerfile", 0700, getClass().getResourceAsStream("Dockerfile"))
+            .build();
+
+        try (DockerClient docker = new DockerClient("unix:///var/run/docker.sock")) {
+            docker.imageBuild("Dockerfile", "jocker:test", null, null, false, false,
+                    null, null, true, true, 0, 0, 0, null, 0, 0, 0, null, null, null, false, null, null, context, System.out::println);
         }
     }
 

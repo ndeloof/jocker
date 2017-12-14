@@ -1479,22 +1479,31 @@ definitions:
         type: "string"
 
   BuildInfo:
-    type: "object"
-    properties:
-      id:
-        type: "string"
-      stream:
-        type: "string"
-      error:
-        type: "string"
-      errorDetail:
-        $ref: "#/definitions/ErrorDetail"
-      status:
-        type: "string"
-      progress:
-        type: "string"
-      progressDetail:
-        $ref: "#/definitions/ProgressDetail"
+      type: "object"
+      properties:
+        id:
+          type: "string"
+        stream:
+          type: "string"
+        error:
+          type: "string"
+        errorDetail:
+          $ref: "#/definitions/ErrorDetail"
+        status:
+          type: "string"
+        progress:
+          type: "string"
+        progressDetail:
+          $ref: "#/definitions/ProgressDetail"
+        aux:
+          $ref: "#/definitions/ImageID"
+
+  ImageID:
+     type: "object"
+     description: "Image id after building"
+     properties:
+       ID:
+         type: "string"
 
   CreateImageInfo:
     type: "object"
@@ -1531,9 +1540,9 @@ definitions:
   ProgressDetail:
     type: "object"
     properties:
-      code:
+      current:
         type: "integer"
-      message:
+      total:
         type: "integer"
 
   ErrorResponse:
