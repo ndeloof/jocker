@@ -774,10 +774,4 @@ public class DockerClient implements Closeable {
             return headers;
         }
     }
-
-
-    public static void main(String[] args) throws IOException {
-        final DockerClient docker = new DockerClient("unix:///var/run/docker.sock");
-        docker.imagePush("ndeloof/toto", "latest", new AuthConfig(), System.out::println);
-    }
 }
