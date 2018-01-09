@@ -111,7 +111,7 @@ public SomeType apiMethod(String param) {
   - [x] [ImageCreate](https://docs.docker.com/engine/api/v1.32/#operation/ImageCreate) (aka "pull")
   - [x] [ImageInspect](https://docs.docker.com/engine/api/v1.32/#operation/ImageInspect)
   - [ ] [ImageHistory](https://docs.docker.com/engine/api/v1.32/#operation/ImageHistory)
-  - [ ] [ImagePush](https://docs.docker.com/engine/api/v1.32/#operation/ImagePush)
+  - [x] [ImagePush](https://docs.docker.com/engine/api/v1.32/#operation/ImagePush)
   - [ ] [ImageTag](https://docs.docker.com/engine/api/v1.32/#operation/ImageTag)
   - [ ] [ImageDelete](https://docs.docker.com/engine/api/v1.32/#operation/ImageDelete)
   - [ ] [ImageSearch](https://docs.docker.com/engine/api/v1.32/#operation/ImageSearch)

@@ -30,7 +30,6 @@ import java.io.Reader;
 import java.net.Socket;
 import java.net.URI;
 import java.util.Base64;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -381,6 +380,9 @@ public class DockerClient implements Closeable {
         return gson.fromJson(r.getBody(), ContainerPruneResponse.class);
     }
 
+    /**
+     * see https://docs.docker.com/engine/api/v1.32/#operation/ExecStart
+     */
     public Streams execStart(String id, boolean detach, boolean tty) throws IOException {
         StringBuilder path = new StringBuilder("/v").append(version).append("/exec/").append(id).append("/start");
         final Response response = doPOST(path.toString(), "{\"Detach\": " + detach + ", \"Tty\": " + tty + "}");
@@ -400,6 +402,9 @@ public class DockerClient implements Closeable {
         };
     }
 
+    /**
+     * see https://docs.docker.com/engine/api/v1.32/#operation/ExecInspect
+     */
     public ExecInspectResponse execInspect(String id) throws IOException {
         StringBuilder path = new StringBuilder("/v").append(version).append("/exec/").append(id).append("/json");
         Response r = doGET(path.toString());
@@ -408,7 +413,10 @@ public class DockerClient implements Closeable {
     }
 
 
-    /** "pull" flavor of ImageCreate */
+    /**
+     * "pull" flavor of ImageCreate
+     * see https://docs.docker.com/engine/api/v1.32/#operation/ImageCreate
+     */
     public void imagePull(String image, String tag, AuthConfig authentication, Consumer<CreateImageInfo> consumer) throws IOException {
         if (tag == null) tag = "latest";
         StringBuilder path = new StringBuilder("/v").append(version).append("/images/create?fromImage=").append(image).append("&tag=").append(tag);
@@ -426,6 +434,9 @@ public class DockerClient implements Closeable {
         }
     }
 
+    /**
+     * see https://docs.docker.com/engine/api/v1.32/#operation/ImageInspect
+     */
     public Image imageInspect(String image) throws IOException {
         StringBuilder path = new StringBuilder("/v").append(version).append("/images/").append(image).append("/json");
         final Response response = doGET(path.toString());
@@ -433,73 +444,71 @@ public class DockerClient implements Closeable {
         return gson.fromJson(body, Image.class);
     }
 
-    public void imageBuild(String dockerfile, String tag, String extrahosts, String remote, boolean nocache, boolean quiet,
-                            Collection<String> cachefrom, String pull, boolean rm, boolean forcerm,
-                            long memory, long memswap, long cpushares, String cpusetcpus, long cpuperiod, long cpuquota,
-                            long shmsize, String ulimits, String networkmode,
-                            Map<String,String> buildargs, boolean squash, Collection<String> labels,
-                            AuthConfig authentication, InputStream context,
-                            Consumer<BuildInfo> consumer) throws IOException {
+    /**
+     * see https://docs.docker.com/engine/api/v1.32/#operation/ImageBuild
+     * @param buildImageRequest
+     */
+    public void imageBuild(BuildImageRequest buildImageRequest, AuthConfig authentication, InputStream context, Consumer<BuildInfo> consumer) throws IOException {
         StringBuilder uri = new StringBuilder("/v").append(version).append("/build")
-                .append("?q=").append(quiet)
-                .append("&nocache=").append(nocache)
-                .append("&rm=").append(rm)
-                .append("&forcerm=").append(forcerm)
-                .append("&squash=").append(squash);
+                .append("?q=").append(buildImageRequest.isQuiet())
+                .append("&nocache=").append(buildImageRequest.isNocache())
+                .append("&rm=").append(buildImageRequest.isRm())
+                .append("&forcerm=").append(buildImageRequest.isForcerm())
+                .append("&squash=").append(buildImageRequest.isSquash());
 
-        if (dockerfile != null) {
-            uri.append("&dockerfile=").append(dockerfile);
+        if (buildImageRequest.getDockerfile() != null) {
+            uri.append("&dockerfile=").append(buildImageRequest.getDockerfile());
         }
-        if (buildargs != null && !buildargs.isEmpty()) {
-            uri.append("&buildargs=").append(gson.toJson(buildargs));
+        if (buildImageRequest.getBuildargs() != null && !buildImageRequest.getBuildargs().isEmpty()) {
+            uri.append("&buildargs=").append(gson.toJson(buildImageRequest.getBuildargs()));
         }
-        if (tag != null) {
-            uri.append("&t=").append(tag);
+        if (buildImageRequest.getTag() != null) {
+            uri.append("&t=").append(buildImageRequest.getTag());
         }
-        if (extrahosts != null) {
-            uri.append("&extrahosts=").append(extrahosts);
+        if (buildImageRequest.getExtrahosts() != null) {
+            uri.append("&extrahosts=").append(buildImageRequest.getExtrahosts());
         }
-        if (ulimits != null) {
-            uri.append("&ulimits=").append(ulimits);
+        if (buildImageRequest.getUlimits() != null) {
+            uri.append("&ulimits=").append(buildImageRequest.getUlimits());
         }
-        if (remote != null) {
-            uri.append("&remote=").append(remote);
+        if (buildImageRequest.getRemote() != null) {
+            uri.append("&remote=").append(buildImageRequest.getRemote());
         }
-        if (extrahosts != null) {
-            uri.append("&extrahosts=").append(extrahosts);
+        if (buildImageRequest.getExtrahosts() != null) {
+            uri.append("&extrahosts=").append(buildImageRequest.getExtrahosts());
         }
-        if (cachefrom != null && cachefrom.size() > 0) {
-            uri.append("&cachefrom=").append(gson.toJson(cachefrom));
+        if (buildImageRequest.getCachefrom() != null && buildImageRequest.getCachefrom().size() > 0) {
+            uri.append("&cachefrom=").append(gson.toJson(buildImageRequest.getCachefrom()));
         }
-        if (pull != null) {
-            uri.append("&pull=").append(pull);
+        if (buildImageRequest.getPull() != null) {
+            uri.append("&pull=").append(buildImageRequest.getPull());
         }
-        if (memory >= 0) {
-            uri.append("&memory=").append(memory);
+        if (buildImageRequest.getMemory() >= 0) {
+            uri.append("&memory=").append(buildImageRequest.getMemory());
         }
-        if (memswap >= 0) {
-            uri.append("&memswap=").append(memswap);
+        if (buildImageRequest.getMemswap() >= 0) {
+            uri.append("&memswap=").append(buildImageRequest.getMemswap());
         }
-        if (cpushares >= 0) {
-            uri.append("&cpushares=").append(cpushares);
+        if (buildImageRequest.getCpushares() >= 0) {
+            uri.append("&cpushares=").append(buildImageRequest.getCpushares());
         }
-        if (cpuperiod >= 0) {
-            uri.append("&cpuperiod=").append(cpuperiod);
+        if (buildImageRequest.getCpuperiod() >= 0) {
+            uri.append("&cpuperiod=").append(buildImageRequest.getCpuperiod());
         }
-        if (cpuquota >= 0) {
-            uri.append("&cpuquota=").append(cpuquota);
+        if (buildImageRequest.getCpuquota() >= 0) {
+            uri.append("&cpuquota=").append(buildImageRequest.getCpuquota());
         }
-        if (cpusetcpus != null) {
-            uri.append("&cpusetcpus=").append(cpusetcpus);
+        if (buildImageRequest.getCpusetcpus() != null) {
+            uri.append("&cpusetcpus=").append(buildImageRequest.getCpusetcpus());
         }
-        if (shmsize >= 0) {
-            uri.append("&shmsize=").append(shmsize);
+        if (buildImageRequest.getShmsize() >= 0) {
+            uri.append("&shmsize=").append(buildImageRequest.getShmsize());
         }
-        if (labels != null && !labels.isEmpty()) {
-            uri.append("&labels=").append(gson.toJson(labels));
+        if (buildImageRequest.getLabels() != null && !buildImageRequest.getLabels().isEmpty()) {
+            uri.append("&labels=").append(gson.toJson(buildImageRequest.getLabels()));
         }
-        if (networkmode != null) {
-            uri.append("&networkmode=").append(networkmode);
+        if (buildImageRequest.getNetworkmode() != null) {
+            uri.append("&networkmode=").append(buildImageRequest.getNetworkmode());
         }
 
         Map headers = new HashMap();
@@ -515,6 +524,24 @@ public class DockerClient implements Closeable {
 
         while (!in.isEof()) {
             consumer.accept(gson.fromJson(new JsonReader(reader), BuildInfo.class));
+        }
+    }
+
+    /**
+     * see https://docs.docker.com/engine/api/v1.32/#operation/ImagePush
+     */
+    public void imagePush(String image, String tag, AuthConfig authentication, Consumer<PushImageInfo> consumer) throws IOException {
+        if (tag == null) tag = "latest";
+        StringBuilder path = new StringBuilder("/v").append(version).append("/images/").append(image).append("/push?tag=").append(tag);
+        Map headers = new HashMap();
+        headers.put("X-Registry-Auth", Base64.getEncoder().encodeToString(gson.toJson(authentication).getBytes(UTF_8)));
+        doPOST(path.toString(), "", headers);
+
+        final ChunkedInputStream in = new ChunkedInputStream(socket.getInputStream());
+        final InputStreamReader reader = new InputStreamReader(in);
+
+        while (!in.isEof()) {
+            consumer.accept(gson.fromJson(new JsonReader(reader), PushImageInfo.class));
         }
     }
 
@@ -746,5 +773,11 @@ public class DockerClient implements Closeable {
         public Map<String, String> getHeaders() {
             return headers;
         }
+    }
+
+
+    public static void main(String[] args) throws IOException {
+        final DockerClient docker = new DockerClient("unix:///var/run/docker.sock");
+        docker.imagePush("ndeloof/toto", "latest", new AuthConfig(), System.out::println);
     }
 }

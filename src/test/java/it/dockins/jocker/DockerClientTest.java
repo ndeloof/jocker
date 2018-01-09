@@ -2,37 +2,30 @@ package it.dockins.jocker;
 
 
 import it.dockins.jocker.io.TarInputStreamBuilder;
-import it.dockins.jocker.model.ContainerInspectResponseState;
+import it.dockins.jocker.model.BuildImageRequest;
 import it.dockins.jocker.model.ContainerPruneResponse;
 import it.dockins.jocker.model.ContainerSpec;
 import it.dockins.jocker.model.ContainerSummary;
 import it.dockins.jocker.model.ContainerSummaryInner;
 import it.dockins.jocker.model.ContainersFilters;
-import it.dockins.jocker.model.ExecConfig;
 import it.dockins.jocker.model.FileSystemHeaders;
 import it.dockins.jocker.model.Streams;
 import it.dockins.jocker.model.SystemInfo;
 import it.dockins.jocker.model.SystemVersionResponse;
 import it.dockins.jocker.model.WaitCondition;
-import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.compress.utils.IOUtils;
 import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
 
@@ -223,8 +216,11 @@ public class DockerClientTest {
             .build();
 
         try (DockerClient docker = new DockerClient("unix:///var/run/docker.sock")) {
-            docker.imageBuild("Dockerfile", "jocker:test", null, null, false, false,
-                    null, null, true, true, 0, 0, 0, null, 0, 0, 0, null, null, null, false, null, null, context, System.out::println);
+            docker.imageBuild(
+                    new BuildImageRequest()
+                            .dockerfile("Dockerfile")
+                            .tag("jocker:test"),
+                    null, context, System.out::println);
         }
     }
 
