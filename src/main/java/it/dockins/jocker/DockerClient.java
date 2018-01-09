@@ -64,8 +64,6 @@ public class DockerClient implements Closeable {
         if ("unix".equals(uri.getScheme())) {
             
             final AFUNIXSocketAddress unix = new AFUNIXSocketAddress(new File(uri.getPath()));
-            //UnixSocketAddress address = new UnixSocketAddress("/var/run/docker.sock");
-            // socket = UnixSocketChannel.open(address).socket();
             socket = AFUNIXSocket.newInstance();
             socket.connect(unix);
             host = "docker";
