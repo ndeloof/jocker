@@ -1,42 +1,34 @@
 package it.dockins.jocker;
 
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.stream.JsonReader;
 import it.dockins.jocker.io.ChunkedInputStream;
-import it.dockins.jocker.io.ContentLengthInputStream;
 import it.dockins.jocker.io.DockerMultiplexedInputStream;
 import it.dockins.jocker.model.*;
 import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
 import org.apache.commons.compress.utils.IOUtils;
-import org.newsclub.net.unix.AFUNIXSocket;
-import org.newsclub.net.unix.AFUNIXSocketAddress;
 
 import javax.net.ssl.SSLContext;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.io.PrintWriter;
 import java.io.Reader;
 import java.net.Socket;
 import java.net.URI;
+import java.nio.channels.Channels;
 import java.util.Base64;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.zip.GZIPOutputStream;
 
-import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
@@ -44,55 +36,26 @@ import static java.nio.charset.StandardCharsets.UTF_8;
  * {@link Socket}.
  * @author <a href="mailto:nicolas.deloof@gmail.com">Nicolas De Loof</a>
  */
-public class DockerClient implements Closeable {
-
-    private final Socket socket;
-
-    private final Gson gson;
+public class DockerClient extends HttpRestClient {
 
     private String version;
     
-    private String host;
-
     public DockerClient(String dockerHost) throws IOException {
         this(dockerHost, null);
     }
 
     public DockerClient(String dockerHost, SSLContext ssl) throws IOException {
-
-        URI uri = URI.create(dockerHost);
-        if ("unix".equals(uri.getScheme())) {
-            
-            final AFUNIXSocketAddress unix = new AFUNIXSocketAddress(new File(uri.getPath()));
-            socket = AFUNIXSocket.newInstance();
-            socket.connect(unix);
-            host = "docker";
-        } else {
-            host = uri.getHost();
-            if (ssl == null) {
-                socket = new Socket(host, uri.getPort());
-            } else {
-                socket = ssl.getSocketFactory().createSocket(host, uri.getPort());
-            }
-        }
-
-        gson = new GsonBuilder().create();
+        super(URI.create(dockerHost), ssl);
         version = version().getApiVersion();
     }
 
-    @Override
-    public void close() throws IOException {
-        socket.close();
-    }
-
     public SystemVersionResponse version() throws IOException {
-        Response r = doGET("/version");
+        HttpRestClient.Response r = doGET("/version");
         return gson.fromJson(r.getBody(), SystemVersionResponse.class);
     }
 
-
     public SystemInfo info() throws IOException {
-        Response r = doGET("/v"+version+"/info");
+        HttpRestClient.Response r = doGET("/v"+version+"/info");
         return gson.fromJson(r.getBody(), SystemInfo.class);
     }
 
@@ -113,10 +76,9 @@ public class DockerClient implements Closeable {
         if (limit > 0) path.append("&limit=").append(limit);
         if (filters != null) path.append("&filters=").append(filters);
 
-        Response r = doGET(path.toString());
+        HttpRestClient.Response r = doGET(path.toString());
         return gson.fromJson(r.getBody(), ContainerSummary.class);
     }
-
 
     /**
      * copy a single file to a container
@@ -131,10 +93,8 @@ public class DockerClient implements Closeable {
         doPUT(uri.toString(), tar);
     }
 
-
     /** Helper method to put a single file inside container */
     public void putContainerFile(String container, String path, boolean noOverwriteDirNonDir, File file) throws IOException {
-
         final ByteArrayOutputStream bos = new ByteArrayOutputStream();
         try (GZIPOutputStream gz = new GZIPOutputStream(bos);
              TarArchiveOutputStream tar = new TarArchiveOutputStream(gz);
@@ -150,15 +110,14 @@ public class DockerClient implements Closeable {
     /**
      * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerCreate
      */
-    public ContainerCreateResponse containerCreate(ContainerSpec containerConfig, String name) throws IOException {
-
+    public ContainerCreateResponse containerCreate(ContainerConfig containerConfig, String name) throws IOException {
         StringBuilder path = new StringBuilder("/v").append(version).append("/containers/create");
         if (name != null) {
             path.append("?name=").append(name);
         }
 
         String spec = gson.toJson(containerConfig);
-        Response r = doPOST(path.toString(), spec);
+        HttpRestClient.Response r = doPOST(path.toString(), spec);
         return gson.fromJson(r.getBody(), ContainerCreateResponse.class);
     }
 
@@ -204,7 +163,7 @@ public class DockerClient implements Closeable {
     public ContainerChangeResponseItem[] containerChanges(String container, boolean stream) throws IOException {
         StringBuilder uri = new StringBuilder("/v").append(version)
                 .append("/containers/").append(container).append("/changes");
-        final Response response = doGET(uri.toString());
+        final HttpRestClient.Response response = doGET(uri.toString());
         return gson.fromJson(response.getBody(), ContainerChangeResponseItem[].class);
     }
 
@@ -262,7 +221,7 @@ public class DockerClient implements Closeable {
         if (condition != null) {
             uri.append("?condition=").append(condition.getValue());
         }
-        Response r = doPOST(uri.toString());
+        HttpRestClient.Response r = doPOST(uri.toString());
         return gson.fromJson(r.getBody(), ContainerWaitResponse.class);
     }
 
@@ -290,8 +249,8 @@ public class DockerClient implements Closeable {
             uri.append("&tail=").append(tail);
         }
 
-        Response r = doGET(uri.toString());
-        return new ChunkedInputStream(socket.getInputStream());
+        HttpRestClient.Response r = doGET(uri.toString());
+        return new ChunkedInputStream(Channels.newInputStream(socket));
     }
 
     public Streams containerAttach(String id, boolean stdin, boolean stdout, boolean stderr, boolean stream, boolean logs, String detachKeys) throws IOException {
@@ -306,19 +265,19 @@ public class DockerClient implements Closeable {
             path.append("&detachKeys=").append(detachKeys);
         }
 
-        final Response response = doPOST(path.toString());
+        final HttpRestClient.Response response = doPOST(path.toString());
         return new Streams() {
 
             @Override
             public InputStream stdout() throws IOException {
                 // FIXME https://github.com/moby/moby/issues/35761
-                return new DockerMultiplexedInputStream(socket.getInputStream());
+                return new DockerMultiplexedInputStream(Channels.newInputStream(socket));
             }
 
             @Override
             public OutputStream stdin() throws IOException {
                 if (!stdin) throw new IOException("stdin is not attached");
-                return socket.getOutputStream();
+                return Channels.newOutputStream(socket);
             }
         };
     }
@@ -327,7 +286,7 @@ public class DockerClient implements Closeable {
      * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerInspect
      */
     public ContainerInspectResponse containerInspect(String container) throws IOException {
-        Response r = doGET("/v"+version+"/containers/"+container+"/json");
+        HttpRestClient.Response r = doGET("/v"+version+"/containers/"+container+"/json");
         final Reader body = r.getBody();
         return gson.fromJson(body, ContainerInspectResponse.class);
     }
@@ -338,7 +297,7 @@ public class DockerClient implements Closeable {
     public String containerExec(String container, ExecConfig execConfig) throws IOException {
         StringBuilder uri = new StringBuilder("/v").append(version).append("/containers/").append(container).append("/exec");
         String spec = gson.toJson(execConfig);
-        Response r = doPOST(uri.toString(), spec);
+        HttpRestClient.Response r = doPOST(uri.toString(), spec);
         return gson.fromJson(r.getBody(), IdResponse.class).getId();
     }
 
@@ -347,7 +306,7 @@ public class DockerClient implements Closeable {
      */
     public FileSystemHeaders containerArchiveInfo(String container, String path) throws IOException {
         StringBuilder uri = new StringBuilder("/v").append(version).append("/containers/").append(container).append("/archive?path=").append(path);
-        Response r = doHEAD(uri.toString());
+        HttpRestClient.Response r = doHEAD(uri.toString());
         final String stats = r.getHeaders().get("X-Docker-Container-Path-Stat");
         final byte[] json = Base64.getDecoder().decode(stats.getBytes(UTF_8));
 
@@ -362,8 +321,8 @@ public class DockerClient implements Closeable {
      */
     public TarArchiveInputStream containerArchive(String container, String path) throws IOException {
         StringBuilder uri = new StringBuilder("/v").append(version).append("/containers/").append(container).append("/archive?path=").append(path);
-        Response r = doGET(uri.toString());
-        return new TarArchiveInputStream(new ChunkedInputStream(socket.getInputStream()));
+        HttpRestClient.Response r = doGET(uri.toString());
+        return new TarArchiveInputStream(new ChunkedInputStream(Channels.newInputStream(socket)));
     }
 
     /**
@@ -374,7 +333,7 @@ public class DockerClient implements Closeable {
         if (filters != null) {
             path.append("?filters=").append(gson.toJson(filters));
         }
-        Response r = doPOST(path.toString());
+        HttpRestClient.Response r = doPOST(path.toString());
         return gson.fromJson(r.getBody(), ContainerPruneResponse.class);
     }
 
@@ -383,19 +342,19 @@ public class DockerClient implements Closeable {
      */
     public Streams execStart(String id, boolean detach, boolean tty) throws IOException {
         StringBuilder path = new StringBuilder("/v").append(version).append("/exec/").append(id).append("/start");
-        final Response response = doPOST(path.toString(), "{\"Detach\": " + detach + ", \"Tty\": " + tty + "}");
+        final HttpRestClient.Response response = doPOST(path.toString(), "{\"Detach\": " + detach + ", \"Tty\": " + tty + "}");
         if (detach) return null;
         return new Streams() {
 
             @Override
             public InputStream stdout() throws IOException {
                 // FIXME https://github.com/moby/moby/issues/35761
-                return new DockerMultiplexedInputStream(socket.getInputStream());
+                return new DockerMultiplexedInputStream(Channels.newInputStream(socket));
             }
 
             @Override
             public OutputStream stdin() throws IOException {
-                return socket.getOutputStream();
+                return Channels.newOutputStream(socket);
             }
         };
     }
@@ -405,7 +364,7 @@ public class DockerClient implements Closeable {
      */
     public ExecInspectResponse execInspect(String id) throws IOException {
         StringBuilder path = new StringBuilder("/v").append(version).append("/exec/").append(id).append("/json");
-        Response r = doGET(path.toString());
+        HttpRestClient.Response r = doGET(path.toString());
         final Reader body = r.getBody();
         return gson.fromJson(body, ExecInspectResponse.class);
     }
@@ -424,7 +383,7 @@ public class DockerClient implements Closeable {
         }
         doPOST(path.toString(), "", headers);
 
-        final ChunkedInputStream in = new ChunkedInputStream(socket.getInputStream());
+        final ChunkedInputStream in = new ChunkedInputStream(Channels.newInputStream(socket));
         final InputStreamReader reader = new InputStreamReader(in);
 
         while (!in.isEof()) {
@@ -437,7 +396,7 @@ public class DockerClient implements Closeable {
      */
     public Image imageInspect(String image) throws IOException {
         StringBuilder path = new StringBuilder("/v").append(version).append("/images/").append(image).append("/json");
-        final Response response = doGET(path.toString());
+        final HttpRestClient.Response response = doGET(path.toString());
         final Reader body = response.getBody();
         return gson.fromJson(body, Image.class);
     }
@@ -517,7 +476,7 @@ public class DockerClient implements Closeable {
 
         doPOST(uri.toString(), context, headers);
 
-        final ChunkedInputStream in = new ChunkedInputStream(socket.getInputStream());
+        final ChunkedInputStream in = new ChunkedInputStream(Channels.newInputStream(socket));
         final InputStreamReader reader = new InputStreamReader(in);
 
         while (!in.isEof()) {
@@ -535,215 +494,12 @@ public class DockerClient implements Closeable {
         headers.put("X-Registry-Auth", Base64.getEncoder().encodeToString(gson.toJson(authentication).getBytes(UTF_8)));
         doPOST(path.toString(), "", headers);
 
-        final ChunkedInputStream in = new ChunkedInputStream(socket.getInputStream());
+        final ChunkedInputStream in = new ChunkedInputStream(Channels.newInputStream(socket));
         final InputStreamReader reader = new InputStreamReader(in);
 
         while (!in.isEof()) {
             consumer.accept(gson.fromJson(new JsonReader(reader), PushImageInfo.class));
         }
-    }
-
-
-    private Response doGET(String path) throws IOException {
-        final OutputStream out = socket.getOutputStream();
-
-        final PrintWriter w = new PrintWriter(out);
-        w.println("GET " + path + " HTTP/1.1");
-        w.println("Host: "+host);
-        w.println();
-        w.flush();
-
-        return getResponse();
-
-    }
-
-    private Response doPOST(String path) throws IOException {
-        return doPOST(path, "");
-    }
-
-    private Response doPOST(String path, String payload) throws IOException {
-        return doPOST(path, payload, Collections.EMPTY_MAP);
-    }
-
-    private Response doPOST(String path, InputStream payload, Map<String, String> headers) throws IOException {
-
-        final OutputStream out = socket.getOutputStream();
-        if (!headers.containsKey("Content-Type")) {
-            headers.put("Content-Type", "application/json; charset=utf-8");
-        }
-
-        final PrintWriter w = new PrintWriter(out);
-        w.println("POST " + path + " HTTP/1.1");
-        w.println("Host: "+host);
-        w.println("Transfer-Encoding: chunked");
-        for (Map.Entry<String, String> header : headers.entrySet()) {
-            w.println(header.getKey() +": "+header.getValue());
-        }
-        w.println();
-        w.flush();
-
-        byte[] buffer = new byte[CHUNK_SIZE];
-        int read;
-        while ((read = payload.read(buffer, 0, CHUNK_SIZE)) > 0) {
-            out.write(Integer.toHexString(read).getBytes(US_ASCII));
-            out.write(CRLF);
-            out.write(buffer, 0, read);
-            out.write(CRLF);
-            System.out.println("wrote "+ read);
-        }
-        out.write(CHUNK_END);
-        out.flush();
-
-        return getResponse();
-    }
-
-    private final byte[] CRLF = "\r\n".getBytes(US_ASCII);
-    private final byte[] CHUNK_END = "0\r\n\r\n".getBytes(US_ASCII);
-    private final int CHUNK_SIZE = 4 * 1024;
-
-
-
-    private Response doPOST(String path, String payload, Map<String, String> headers) throws IOException {
-        return doPOST(path, payload.getBytes(UTF_8), headers);
-    }
-    
-    private Response doPOST(String path, byte[] payload, Map<String, String> headers) throws IOException {
-
-        final OutputStream out = socket.getOutputStream();
-
-        final PrintWriter w = new PrintWriter(out);
-        w.println("POST " + path + " HTTP/1.1");
-        w.println("Host: "+host);
-        w.println("Content-Type: application/json; charset=utf-8");
-        w.println("Content-Length: "+payload.length);
-        for (Map.Entry<String, String> header : headers.entrySet()) {
-            w.println(header.getKey() +": "+header.getValue());
-        }
-        w.println();
-        w.flush();
-        out.write(payload);
-
-        return getResponse();
-    }
-
-    private Response doHEAD(String path) throws IOException {
-
-        final OutputStream out = socket.getOutputStream();
-        final PrintWriter w = new PrintWriter(out);
-        w.println("HEAD " + path + " HTTP/1.1");
-        w.println("Host: "+host);
-        w.println();
-        w.flush();
-        return getResponse();
-    }
-
-
-    private Response doPUT(String path, byte[] bytes) throws IOException {
-
-        final OutputStream out = socket.getOutputStream();
-
-        final PrintWriter w = new PrintWriter(out);
-        w.println("PUT " + path + " HTTP/1.1");
-        w.println("Host: "+host);
-        w.println("Content-Type: application/gzip");
-        w.println("Content-Length: "+bytes.length);
-        w.println();
-        w.flush();
-        out.write(bytes);
-
-        return getResponse();
-    }
-
-    private Response doDELETE(String path) throws IOException {
-
-        final OutputStream out = socket.getOutputStream();
-
-        final PrintWriter w = new PrintWriter(out);
-        w.println("DELETE " + path + " HTTP/1.1");
-        w.println("Host: "+host);
-        w.println();
-        w.flush();
-
-        return getResponse();
-    }
-
-    private Response getResponse() throws IOException {
-
-        final InputStream in = socket.getInputStream();
-        int status = readHttpStatus(in);
-        Map<String, String> headers = readHttpResponseHeaders(in);
-
-        Reader body;
-        if (headers.containsKey("Content-Length")) {
-            final int length = Integer.parseInt(headers.get("Content-Length"));
-            body = new InputStreamReader(new ContentLengthInputStream(in, length), UTF_8);
-        } else if (headers.containsKey("Transfer-Encoding") && "chunked".equals(headers.get("Transfer-Encoding"))) {
-            body = new InputStreamReader(new ChunkedInputStream(in), UTF_8);
-        } else {
-            body = new InputStreamReader(socket.getInputStream());
-        }
-
-        Response response = new Response(headers, body);
-
-
-        if (status / 100 > 2) {
-            String message = String.valueOf(status);
-            final String type = headers.get("Content-Type");
-            if (type != null && type.startsWith("application/json")) {
-                message = gson.fromJson(response.getBody(), ErrorDetail.class).getMessage();
-            }
-            if (status == 404) {
-                throw new NotFoundException(message);
-            }
-            if (status == 409) {
-                throw new ConflictException(message);
-            }
-            throw new IOException(message);
-        }
-
-        return response;
-    }
-
-    private Map<String, String> readHttpResponseHeaders(InputStream in) throws IOException {
-        String line;
-        int responseCode;
-
-        Map<String, String> headers = new HashMap<>();
-        int length = -1;
-        boolean chunked = false;
-        while ((line = readLine(in)) != null) {
-            if (line.length() == 0) break; // end of header
-            final int x = line.indexOf(':');
-            String header = line.substring(0, x);
-            final String value = line.substring(x + 2);
-            headers.put(header, value);
-        }
-        return headers;
-    }
-
-    private int readHttpStatus(InputStream in) throws IOException {
-        String line = readLine(in);
-        int i = line.indexOf(' ');
-        int j = line.indexOf(' ',  i+1);
-        return Integer.parseInt(line.substring(i+1,j));
-    }
-
-    private String readLine(final InputStream in) throws IOException {
-        StringBuilder s = new StringBuilder();
-        char c;
-        while((c = (char) in.read()) != '\r') {
-            s.append(c);
-        }
-        in.read(); // \n
-        return s.toString();
-    }
-
-    private Reader readPayload(final InputStream in, int length) throws IOException {
-        return new InputStreamReader(new ContentLengthInputStream(in, length), UTF_8);
-    }
-
-    private Reader readChunkedPayload(final InputStream in) throws IOException {
-        return new InputStreamReader(new ChunkedInputStream(in), UTF_8);
     }
 
     @Override
@@ -754,22 +510,4 @@ public class DockerClient implements Closeable {
         return sb.toString();
     }
 
-    public static class Response {
-        private final Reader body;
-
-        private final Map<String,String> headers;
-
-        public Response(Map<String, String> headers, Reader body) {
-            this.body = body;
-            this.headers = headers;
-        }
-
-        public Reader getBody() {
-            return body;
-        }
-
-        public Map<String, String> getHeaders() {
-            return headers;
-        }
-    }
 }
