@@ -46,7 +46,9 @@ public class DockerClientTest {
             
     @Before
     public void init() throws IOException {
-        docker = new DockerClient("unix:///var/run/docker.sock");
+        String dockerHost = System.getenv("DOCKER_HOST");
+        if (dockerHost == null) dockerHost = "unix:///var/run/docker.sock";
+        docker = new DockerClient(dockerHost);
     }
     
     @After
