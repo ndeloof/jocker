@@ -1,3 +1,5 @@
+![ci status](https://github.com/ndeloof/jocker/workflows/Continuous%20integration/badge.svg)
+
 # Jocker, a Java client library for Docker API
 
 Jocker is (yet another) Docker Client library to access Docker API.
