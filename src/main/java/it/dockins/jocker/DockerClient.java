@@ -49,9 +49,9 @@ public class DockerClient extends HttpRestClient {
         version = version().getApiVersion();
     }
 
-    public SystemVersionResponse version() throws IOException {
+    public SystemVersion version() throws IOException {
         HttpRestClient.Response r = doGET("/version");
-        return gson.fromJson(r.getBody(), SystemVersionResponse.class);
+        return gson.fromJson(r.getBody(), SystemVersion.class);
     }
 
     public SystemInfo info() throws IOException {

@@ -36,8 +36,8 @@ public class ChunkedInputStream extends InputStream {
         if (readInteral() < 0) return -1;
         len = Math.min(next, len);
         byte[] buff = new byte[len];
-        final int read = chunked.read(buff, off, len);
-        System.arraycopy(buff, 0, b, 0, read);
+        final int read = chunked.read(buff, 0, len);
+        System.arraycopy(buff, 0, b, off, read);
         next -= read;
         return read;
     }

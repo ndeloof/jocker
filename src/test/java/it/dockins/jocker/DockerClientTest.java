@@ -1,18 +1,7 @@
 package it.dockins.jocker;
 
-
 import it.dockins.jocker.io.TarInputStreamBuilder;
-import it.dockins.jocker.model.BuildImageRequest;
-import it.dockins.jocker.model.ContainerPruneResponse;
-import it.dockins.jocker.model.ContainerSpec;
-import it.dockins.jocker.model.ContainerSummary;
-import it.dockins.jocker.model.ContainerSummaryInner;
-import it.dockins.jocker.model.ContainersFilters;
-import it.dockins.jocker.model.FileSystemHeaders;
-import it.dockins.jocker.model.Streams;
-import it.dockins.jocker.model.SystemInfo;
-import it.dockins.jocker.model.SystemVersionResponse;
-import it.dockins.jocker.model.WaitCondition;
+import it.dockins.jocker.model.*;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.compress.utils.IOUtils;
@@ -27,13 +16,13 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
 
-import static it.dockins.jocker.model.ContainerInspectResponseState.StatusEnum.*;
+import static it.dockins.jocker.model.ContainerState.StatusEnum.*;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Arrays.asList;
+import static org.apache.commons.io.IOUtils.*;
 
 /**
  * @author <a href="mailto:nicolas.deloof@gmail.com">Nicolas De Loof</a>
@@ -63,7 +52,7 @@ public class DockerClientTest {
 
     @Test
     public void version() throws IOException {
-        final SystemVersionResponse version = docker.version();
+        final SystemVersion version = docker.version();
         Assert.assertNotNull(version);
         Assert.assertNotNull(version.getApiVersion());
         System.out.println(version);
@@ -183,10 +172,7 @@ public class DockerClientTest {
         Assert.assertNotNull(entry);
         final int size = (int) entry.getSize();
         byte[] b = new byte[size];
-        int read = 0;
-        while (read < size) {
-            read += tar.read(b, read, size);
-        }
+        read(tar, b, 0, size);
         Assert.assertNull(tar.getNextTarEntry());
         final String out = new String(b, UTF_8);
         Assert.assertTrue(out.contains("a Java client library for Docker API"));
