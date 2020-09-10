@@ -32,7 +32,7 @@ import java.util.zip.GZIPOutputStream;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
- * Implement <a href="https://docs.docker.com/engine/api/v1.32">Docker API</a> using a plain old java
+ * Implement <a href="https://docs.docker.com/engine/api/v1.40">Docker API</a> using a plain old java
  * {@link Socket}.
  * @author <a href="mailto:nicolas.deloof@gmail.com">Nicolas De Loof</a>
  */
@@ -60,14 +60,14 @@ public class DockerClient extends HttpRestClient {
     }
 
     /**
-     * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerList
+     * see https://docs.docker.com/engine/api/v1.40/#operation/ContainerList
      */
     public ContainerSummary containerList(boolean all, int limit, boolean size, ContainersFilters filters) throws IOException {
         return containerList(all, limit, size, gson.toJson(filters));
     }
 
     /**
-     * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerList
+     * see https://docs.docker.com/engine/api/v1.40/#operation/ContainerList
      */
     public ContainerSummary containerList(boolean all, int limit, boolean size, String filters) throws IOException {
         StringBuilder path = new StringBuilder("/v").append(version).append("/containers/json");
@@ -82,7 +82,7 @@ public class DockerClient extends HttpRestClient {
 
     /**
      * copy a single file to a container
-     * see https://docs.docker.com/engine/api/v1.32/#operation/PutContainerArchive
+     * see https://docs.docker.com/engine/api/v1.40/#operation/PutContainerArchive
      */
     public void putContainerArchive(String container, String path, boolean noOverwriteDirNonDir, byte[] tar) throws IOException {
         StringBuilder uri = new StringBuilder("/v").append(version)
@@ -108,7 +108,7 @@ public class DockerClient extends HttpRestClient {
     }
 
     /**
-     * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerCreate
+     * see https://docs.docker.com/engine/api/v1.40/#operation/ContainerCreate
      */
     public ContainerCreateResponse containerCreate(ContainerConfig containerConfig, String name) throws IOException {
         StringBuilder path = new StringBuilder("/v").append(version).append("/containers/create");
@@ -122,7 +122,7 @@ public class DockerClient extends HttpRestClient {
     }
 
     /**
-     * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerStart
+     * see https://docs.docker.com/engine/api/v1.40/#operation/ContainerStart
      */
     public void containerStart(String container) throws IOException {
         StringBuilder uri = new StringBuilder("/v").append(version)
@@ -131,7 +131,7 @@ public class DockerClient extends HttpRestClient {
     }
 
     /**
-     * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerStop
+     * see https://docs.docker.com/engine/api/v1.40/#operation/ContainerStop
      */
     public void containerStop(String container, int timeout) throws IOException {
         StringBuilder uri = new StringBuilder("/v").append(version)
@@ -140,7 +140,7 @@ public class DockerClient extends HttpRestClient {
     }
 
     /**
-     * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerRestart
+     * see https://docs.docker.com/engine/api/v1.40/#operation/ContainerRestart
      */
     public void containerRestart(String container, int timeout) throws IOException {
         StringBuilder uri = new StringBuilder("/v").append(version)
@@ -149,7 +149,7 @@ public class DockerClient extends HttpRestClient {
     }
 
     /**
-     * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerResize
+     * see https://docs.docker.com/engine/api/v1.40/#operation/ContainerResize
      */
     public void containerResize(String container, int height, int width) throws IOException {
         StringBuilder uri = new StringBuilder("/v").append(version)
@@ -158,7 +158,7 @@ public class DockerClient extends HttpRestClient {
     }
 
     /**
-     * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerChanges
+     * see https://docs.docker.com/engine/api/v1.40/#operation/ContainerChanges
      */
     public ContainerChangeResponseItem[] containerChanges(String container, boolean stream) throws IOException {
         StringBuilder uri = new StringBuilder("/v").append(version)
@@ -168,13 +168,13 @@ public class DockerClient extends HttpRestClient {
     }
 
     /**
-     * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerStats
+     * see https://docs.docker.com/engine/api/v1.40/#operation/ContainerStats
      * FIXME no model in swagger definition.
      */
     // public void containerStats(String container, boolean stream) throws IOException {
 
     /**
-     * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerKill
+     * see https://docs.docker.com/engine/api/v1.40/#operation/ContainerKill
      */
     public void containerKill(String container, String signal) throws IOException {
         StringBuilder uri = new StringBuilder("/v").append(version)
@@ -186,7 +186,7 @@ public class DockerClient extends HttpRestClient {
     }
 
     /**
-     * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerKill
+     * see https://docs.docker.com/engine/api/v1.40/#operation/ContainerKill
      */
     public void containerRename(String container, String name) throws IOException {
         StringBuilder uri = new StringBuilder("/v").append(version)
@@ -195,7 +195,7 @@ public class DockerClient extends HttpRestClient {
     }
 
     /**
-     * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerPause
+     * see https://docs.docker.com/engine/api/v1.40/#operation/ContainerPause
      */
     public void containerPause(String container) throws IOException {
         StringBuilder uri = new StringBuilder("/v").append(version)
@@ -204,7 +204,7 @@ public class DockerClient extends HttpRestClient {
     }
 
     /**
-     * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerUnpause
+     * see https://docs.docker.com/engine/api/v1.40/#operation/ContainerUnpause
      */
     public void containerUnpause(String container) throws IOException {
         StringBuilder uri = new StringBuilder("/v").append(version)
@@ -213,7 +213,7 @@ public class DockerClient extends HttpRestClient {
     }
 
     /**
-     * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerWait
+     * see https://docs.docker.com/engine/api/v1.40/#operation/ContainerWait
      */
     public ContainerWaitResponse containerWait(String container, WaitCondition condition) throws IOException {
         StringBuilder uri = new StringBuilder("/v").append(version)
@@ -226,7 +226,7 @@ public class DockerClient extends HttpRestClient {
     }
 
     /**
-     * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerDelete
+     * see https://docs.docker.com/engine/api/v1.40/#operation/ContainerDelete
      */
     public void containerDelete(String container, boolean volumes, boolean links, boolean force) throws IOException {
         StringBuilder uri = new StringBuilder("/v").append(version)
@@ -283,7 +283,7 @@ public class DockerClient extends HttpRestClient {
     }
 
     /**
-     * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerInspect
+     * see https://docs.docker.com/engine/api/v1.40/#operation/ContainerInspect
      */
     public ContainerInspectResponse containerInspect(String container) throws IOException {
         HttpRestClient.Response r = doGET("/v"+version+"/containers/"+container+"/json");
@@ -292,7 +292,7 @@ public class DockerClient extends HttpRestClient {
     }
 
     /**
-     * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerExec
+     * see https://docs.docker.com/engine/api/v1.40/#operation/ContainerExec
      */
     public String containerExec(String container, ExecConfig execConfig) throws IOException {
         StringBuilder uri = new StringBuilder("/v").append(version).append("/containers/").append(container).append("/exec");
@@ -302,7 +302,7 @@ public class DockerClient extends HttpRestClient {
     }
 
     /**
-     * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerArchiveInfo
+     * see https://docs.docker.com/engine/api/v1.40/#operation/ContainerArchiveInfo
      */
     public FileSystemHeaders containerArchiveInfo(String container, String path) throws IOException {
         StringBuilder uri = new StringBuilder("/v").append(version).append("/containers/").append(container).append("/archive?path=").append(path);
@@ -317,7 +317,7 @@ public class DockerClient extends HttpRestClient {
     }
 
     /**
-     * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerArchive
+     * see https://docs.docker.com/engine/api/v1.40/#operation/ContainerArchive
      */
     public TarArchiveInputStream containerArchive(String container, String path) throws IOException {
         StringBuilder uri = new StringBuilder("/v").append(version).append("/containers/").append(container).append("/archive?path=").append(path);
@@ -326,7 +326,7 @@ public class DockerClient extends HttpRestClient {
     }
 
     /**
-     * see https://docs.docker.com/engine/api/v1.32/#operation/ContainerPrune
+     * see https://docs.docker.com/engine/api/v1.40/#operation/ContainerPrune
      */
     public ContainerPruneResponse containerPrune(ContainersFilters filters) throws IOException {
         StringBuilder path = new StringBuilder("/v").append(version).append("/containers/prune");
@@ -338,7 +338,7 @@ public class DockerClient extends HttpRestClient {
     }
 
     /**
-     * see https://docs.docker.com/engine/api/v1.32/#operation/ExecStart
+     * see https://docs.docker.com/engine/api/v1.40/#operation/ExecStart
      */
     public Streams execStart(String id, boolean detach, boolean tty) throws IOException {
         StringBuilder path = new StringBuilder("/v").append(version).append("/exec/").append(id).append("/start");
@@ -360,7 +360,7 @@ public class DockerClient extends HttpRestClient {
     }
 
     /**
-     * see https://docs.docker.com/engine/api/v1.32/#operation/ExecInspect
+     * see https://docs.docker.com/engine/api/v1.40/#operation/ExecInspect
      */
     public ExecInspectResponse execInspect(String id) throws IOException {
         StringBuilder path = new StringBuilder("/v").append(version).append("/exec/").append(id).append("/json");
@@ -372,7 +372,7 @@ public class DockerClient extends HttpRestClient {
 
     /**
      * "pull" flavor of ImageCreate
-     * see https://docs.docker.com/engine/api/v1.32/#operation/ImageCreate
+     * see https://docs.docker.com/engine/api/v1.40/#operation/ImageCreate
      */
     public void imagePull(String image, String tag, AuthConfig authentication, Consumer<CreateImageInfo> consumer) throws IOException {
         if (tag == null) tag = "latest";
@@ -392,7 +392,7 @@ public class DockerClient extends HttpRestClient {
     }
 
     /**
-     * see https://docs.docker.com/engine/api/v1.32/#operation/ImageInspect
+     * see https://docs.docker.com/engine/api/v1.40/#operation/ImageInspect
      */
     public Image imageInspect(String image) throws IOException {
         StringBuilder path = new StringBuilder("/v").append(version).append("/images/").append(image).append("/json");
@@ -402,7 +402,7 @@ public class DockerClient extends HttpRestClient {
     }
 
     /**
-     * see https://docs.docker.com/engine/api/v1.32/#operation/ImageBuild
+     * see https://docs.docker.com/engine/api/v1.40/#operation/ImageBuild
      * @param buildImageRequest
      */
     public void imageBuild(BuildImageRequest buildImageRequest, AuthConfig authentication, InputStream context, Consumer<BuildInfo> consumer) throws IOException {
@@ -485,7 +485,7 @@ public class DockerClient extends HttpRestClient {
     }
 
     /**
-     * see https://docs.docker.com/engine/api/v1.32/#operation/ImagePush
+     * see https://docs.docker.com/engine/api/v1.40/#operation/ImagePush
      */
     public void imagePush(String image, String tag, AuthConfig authentication, Consumer<PushImageInfo> consumer) throws IOException {
         if (tag == null) tag = "latest";
@@ -500,6 +500,43 @@ public class DockerClient extends HttpRestClient {
         while (!in.isEof()) {
             consumer.accept(gson.fromJson(new JsonReader(reader), PushImageInfo.class));
         }
+    }
+
+    /**
+     * see https://docs.docker.com/engine/api/v1.40/#operation/Volumes
+     */
+    public VolumeListResponse volumeList(VolumeFilters filters) throws IOException {
+        StringBuilder path = new StringBuilder("/v").append(version).append("/volumes");
+        if (filters != null) path.append("?filters=").append(filters.encode(gson));
+        HttpRestClient.Response r = doGET(path.toString());
+        return gson.fromJson(r.getBody(), VolumeListResponse.class);
+    }
+
+    /**
+     * see https://docs.docker.com/engine/api/v1.40/#operation/VolumesCreate
+     */
+    public Volume volumeCreate(VolumeConfig volume) throws IOException {
+        StringBuilder path = new StringBuilder("/v").append(version).append("/volumes/create");
+        HttpRestClient.Response r = doPOST(path.toString(), gson.toJson(volume));
+        return gson.fromJson(r.getBody(), Volume.class);
+    }
+
+    /**
+     * see https://docs.docker.com/engine/api/v1.40/#operation/VolumeInspect
+     */
+    public Volume volumeInspect(String name) throws IOException {
+        StringBuilder path = new StringBuilder("/v").append(version).append("/volumes/").append(name);
+        HttpRestClient.Response r = doGET(path.toString());
+        return gson.fromJson(r.getBody(), Volume.class);
+    }
+
+    /**
+     * see https://docs.docker.com/engine/api/v1.40/#operation/VolumeDelete
+     * @return
+     */
+    public void volumeDelete(String name) throws IOException {
+        StringBuilder path = new StringBuilder("/v").append(version).append("/volumes/").append(name);
+        HttpRestClient.Response r = doDELETE(path.toString());
     }
 
     @Override

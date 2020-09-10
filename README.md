@@ -146,10 +146,10 @@ public SomeType apiMethod(String param) {
 
 ### Volumes 
 
-  - [ ] [VolumeList](https://docs.docker.com/engine/api/v1.40/#operation/VolumeList)
-  - [ ] [VolumeCreate](https://docs.docker.com/engine/api/v1.40/#operation/VolumeCreate)
-  - [ ] [VolumeInspect](https://docs.docker.com/engine/api/v1.40/#operation/VolumeInspect)
-  - [ ] [VolumeDelete](https://docs.docker.com/engine/api/v1.40/#operation/VolumeDelete)
+  - [x] [VolumeList](https://docs.docker.com/engine/api/v1.40/#operation/VolumeList)
+  - [x] [VolumeCreate](https://docs.docker.com/engine/api/v1.40/#operation/VolumeCreate)
+  - [x] [VolumeInspect](https://docs.docker.com/engine/api/v1.40/#operation/VolumeInspect)
+  - [x] [VolumeDelete](https://docs.docker.com/engine/api/v1.40/#operation/VolumeDelete)
   - [ ] [VolumePrune](https://docs.docker.com/engine/api/v1.40/#operation/VolumePrune)
   
 ### Docker Swarm support
@@ -172,7 +172,7 @@ expose my docker4mac socket in plain HTTP :
 
 `docker run -it -v /var/run/docker.sock:/var/run/docker.sock -p 2375:2375 dockins/dockersock`
 
-Then I use [Wireshark](https://www.wireshark.org/) with filter `tcp.port=2375` to capture HTTP frames sent by client 
+Then I use [Wireshark](https://www.wireshark.org/) with filter `tcp.port==2375` to capture HTTP frames sent by client 
 and daemon response. 
 
 

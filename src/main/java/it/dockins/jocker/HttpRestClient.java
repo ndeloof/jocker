@@ -204,7 +204,6 @@ public class HttpRestClient implements Closeable {
             }
             throw new IOException(message);
         }
-
         return response;
     }
 

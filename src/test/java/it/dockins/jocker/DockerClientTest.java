@@ -17,12 +17,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import static it.dockins.jocker.model.ContainerState.StatusEnum.*;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Arrays.asList;
 import static org.apache.commons.io.IOUtils.*;
+import static org.junit.Assert.*;
 
 /**
  * @author <a href="mailto:nicolas.deloof@gmail.com">Nicolas De Loof</a>
@@ -77,11 +80,11 @@ public class DockerClientTest {
     @Test
     public void containerStopAndRestart() throws IOException {
         final String container = createLongRunContainer();
-        Assert.assertEquals(RUNNING, docker.containerInspect(container).getState().getStatus());
+        assertEquals(RUNNING, docker.containerInspect(container).getState().getStatus());
         docker.containerStop(container, 10);
-        Assert.assertEquals(EXITED, docker.containerInspect(container).getState().getStatus());
+        assertEquals(EXITED, docker.containerInspect(container).getState().getStatus());
         docker.containerRestart(container, 10);
-        Assert.assertEquals(RUNNING, docker.containerInspect(container).getState().getStatus());
+        assertEquals(RUNNING, docker.containerInspect(container).getState().getStatus());
 
         System.out.println(container);
     }
@@ -89,11 +92,11 @@ public class DockerClientTest {
     @Test
     public void containerPauseAndUnpause() throws IOException {
         final String container = createLongRunContainer();
-        Assert.assertEquals(RUNNING, docker.containerInspect(container).getState().getStatus());
+        assertEquals(RUNNING, docker.containerInspect(container).getState().getStatus());
         docker.containerPause(container);
-        Assert.assertEquals(PAUSED, docker.containerInspect(container).getState().getStatus());
+        assertEquals(PAUSED, docker.containerInspect(container).getState().getStatus());
         docker.containerUnpause(container);
-        Assert.assertEquals(RUNNING, docker.containerInspect(container).getState().getStatus());
+        assertEquals(RUNNING, docker.containerInspect(container).getState().getStatus());
         System.out.println(container);
     }
 
@@ -101,7 +104,7 @@ public class DockerClientTest {
     public void containerKill() throws IOException {
         final String container = createLongRunContainer();
         docker.containerKill(container, null);
-        Assert.assertEquals(EXITED, docker.containerInspect(container).getState().getStatus());
+        assertEquals(EXITED, docker.containerInspect(container).getState().getStatus());
     }
 
     @Test
@@ -115,7 +118,7 @@ public class DockerClientTest {
         IOUtils.copy(in, bos);
         final String output = bos.toString();
         System.out.println("output: " + output);
-        Assert.assertTrue(output.contains("Hello from Docker!\r\nThis message shows that your installation appears to be working correctly."));
+        assertTrue(output.contains("Hello from Docker!\r\nThis message shows that your installation appears to be working correctly."));
     }
 
     @Test
@@ -130,7 +133,7 @@ public class DockerClientTest {
         final BufferedReader reader = new BufferedReader(new InputStreamReader(streams.stdout()));
         String output = reader.readLine();
         System.out.println("output: " + output);
-        Assert.assertTrue(output.startsWith("PING localhost (127.0.0.1):"));
+        assertTrue(output.startsWith("PING localhost (127.0.0.1):"));
     }
 
     @Test
@@ -138,7 +141,7 @@ public class DockerClientTest {
         docker.imagePull("hello-world", null, null, System.out::println);
         String container = docker.containerCreate(new ContainerSpec().image("hello-world").labels(label).tty(true), null).getId();
         docker.containerRename(container, "foo_bar");
-        Assert.assertEquals("/foo_bar", docker.containerInspect(container).getName());
+        assertEquals("/foo_bar", docker.containerInspect(container).getName());
     }
 
 
@@ -150,7 +153,7 @@ public class DockerClientTest {
         docker.containerWait(container, WaitCondition.NEXT_EXIT);
 
         final ContainerPruneResponse response = docker.containerPrune(new ContainersFilters().label("it.dockins.jocker=test"));
-        Assert.assertTrue(response.getContainersDeleted().contains(container));
+        assertTrue(response.getContainersDeleted().contains(container));
     }
 
     @Test
@@ -159,7 +162,7 @@ public class DockerClientTest {
         String container = docker.containerCreate(new ContainerSpec().image("hello-world").labels(label), null).getId();
         final FileSystemHeaders x = docker.containerArchiveInfo(container, "/hello");
         System.out.println(x);
-        Assert.assertEquals("hello", x.getName());
+        assertEquals("hello", x.getName());
     }
 
     @Test
@@ -173,15 +176,29 @@ public class DockerClientTest {
         final int size = (int) entry.getSize();
         byte[] b = new byte[size];
         read(tar, b, 0, size);
-        Assert.assertNull(tar.getNextTarEntry());
+        assertNull(tar.getNextTarEntry());
         final String out = new String(b, UTF_8);
-        Assert.assertTrue(out.contains("a Java client library for Docker API"));
+        assertTrue(out.contains("a Java client library for Docker API"));
+    }
+
+    @Test
+    public void volumes() throws IOException, InterruptedException {
+        Volume volume = docker.volumeCreate(new VolumeConfig().labels(label));
+        String name = volume.getName();
+
+        VolumeListResponse list = docker.volumeList(new VolumeFilters().label("it.dockins.jocker=test"));
+        List<String> names = list.getVolumes().stream().map(Volume::getName).collect(Collectors.toList());
+        assertTrue(names.contains(name));
+
+        Volume inspect = docker.volumeInspect(name);
+        assertEquals(volume, inspect);
+
+        docker.volumeDelete(name);
     }
 
 
     @Test
     public void imageBuild() throws IOException {
-
         final InputStream context = new TarInputStreamBuilder()
             .add("Dockerfile", 0700, getClass().getResourceAsStream("Dockerfile"))
             .build();
