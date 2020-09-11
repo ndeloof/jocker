@@ -1,10 +1,10 @@
-package it.dockins.jocker;
+package io.timeywimey.jocker;
 
 
 import com.google.gson.stream.JsonReader;
-import it.dockins.jocker.io.ChunkedInputStream;
-import it.dockins.jocker.io.DockerMultiplexedInputStream;
-import it.dockins.jocker.model.*;
+import io.timeywimey.jocker.model.*;
+import io.timeywimey.jocker.io.ChunkedInputStream;
+import io.timeywimey.jocker.io.DockerMultiplexedInputStream;
 import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;

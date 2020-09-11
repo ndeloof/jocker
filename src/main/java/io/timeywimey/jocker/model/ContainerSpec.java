@@ -1,4 +1,4 @@
-package it.dockins.jocker.model;
+package io.timeywimey.jocker.model;
 
 import com.google.gson.annotations.SerializedName;
 

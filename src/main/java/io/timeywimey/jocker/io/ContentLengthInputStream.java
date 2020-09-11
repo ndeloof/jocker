@@ -1,4 +1,4 @@
-package it.dockins.jocker.io;
+package io.timeywimey.jocker.io;
 
 import java.io.IOException;
 import java.io.InputStream;

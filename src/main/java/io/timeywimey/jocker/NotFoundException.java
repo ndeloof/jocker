@@ -1,4 +1,4 @@
-package it.dockins.jocker;
+package io.timeywimey.jocker;
 
 /**
  * @author <a href="mailto:nicolas.deloof@gmail.com">Nicolas De Loof</a>

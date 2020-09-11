@@ -4,11 +4,11 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>it.dockins</groupId>
+    <groupId>io.timey-wimey</groupId>
     <artifactId>jocker</artifactId>
     <version>0.1-SNAPSHOT</version>
 
-    <url>https://github.com/dockins/jocker</url>
+    <url>https://github.com/ndeloof/jocker</url>
     <name>Jocker</name>
     <description>a Java client library for Docker API</description>
 
@@ -20,9 +20,9 @@
     </licenses>
 
     <scm>
-        <connection>scm:git:ssh://github.com/Dockins/jocker.git</connection>
-        <developerConnection>scm:git:ssh://git@github.com/Dockins/jocker.git</developerConnection>
-        <url>https://github.com/Dockins/jocker</url>
+        <connection>scm:git:ssh://github.com/ndeloof/jocker.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/ndeloof/jocker.git</developerConnection>
+        <url>https://github.com/ndeloof/jocker</url>
     </scm>
 
     <properties>
@@ -78,7 +78,7 @@
             <plugin>
                 <groupId>io.swagger</groupId>
                 <artifactId>swagger-codegen-maven-plugin</artifactId>
-                <version>2.4.8</version>
+                <version>2.4.15</version>
                 <executions>
                     <execution>
                         <goals>
@@ -87,7 +87,7 @@
                         <configuration>
                             <inputSpec>src/main/swagger/v1.40.yaml</inputSpec>
                             <language>java</language>
-                            <modelPackage>it.dockins.jocker.model</modelPackage>
+                            <modelPackage>io.timeywimey.jocker.model</modelPackage>
                             <generateModels>true</generateModels>
                             <generateModelDocumentation>false</generateModelDocumentation>
                             <generateApis>false</generateApis>
@@ -114,7 +114,7 @@
                             <verbose>true</verbose>
                             <filesets>
                                 <fileset>
-                                    <directory>${project.build.directory}/generated-sources/swagger/src/main/java/it/dockins/jocker/model</directory>
+                                    <directory>${project.build.directory}/generated-sources/swagger/src/main/java/io/timeywimey/jocker/model</directory>
                                     <includes>
                                         <include>PortMap.java</include>
                                     </includes>
@@ -123,7 +123,15 @@
                         </configuration>
                     </execution>
                 </executions>
-            </plugin><plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-compiler-plugin</artifactId><configuration><source>8</source><target>8</target></configuration></plugin>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>8</source>
+                    <target>8</target>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 </project>

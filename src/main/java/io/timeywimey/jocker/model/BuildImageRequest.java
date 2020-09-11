@@ -1,9 +1,7 @@
-package it.dockins.jocker.model;
+package io.timeywimey.jocker.model;
 
-import java.io.InputStream;
 import java.util.Collection;
 import java.util.Map;
-import java.util.function.Consumer;
 
 public class BuildImageRequest {
     private String dockerfile;

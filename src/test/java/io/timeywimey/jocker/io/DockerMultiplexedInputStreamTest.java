@@ -1,4 +1,4 @@
-package it.dockins.jocker.io;
+package io.timeywimey.jocker.io;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -8,9 +8,6 @@ import java.io.IOException;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.util.Arrays;
-import java.util.logging.Logger;
-
-import static org.junit.Assert.*;
 
 class DemuxTester implements AutoCloseable, Runnable {
 

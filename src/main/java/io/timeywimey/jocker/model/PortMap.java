@@ -11,7 +11,7 @@
  */
 
 
-package it.dockins.jocker.model;
+package io.timeywimey.jocker.model;
 
 import io.swagger.annotations.ApiModel;
 

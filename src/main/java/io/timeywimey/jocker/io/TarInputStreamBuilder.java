@@ -1,4 +1,4 @@
-package it.dockins.jocker.io;
+package io.timeywimey.jocker.io;
 
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;

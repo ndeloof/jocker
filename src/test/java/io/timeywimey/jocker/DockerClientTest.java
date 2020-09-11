@@ -1,7 +1,7 @@
-package it.dockins.jocker;
+package io.timeywimey.jocker;
 
-import it.dockins.jocker.io.TarInputStreamBuilder;
-import it.dockins.jocker.model.*;
+import io.timeywimey.jocker.model.*;
+import io.timeywimey.jocker.io.TarInputStreamBuilder;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.compress.utils.IOUtils;
@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static it.dockins.jocker.model.ContainerState.StatusEnum.*;
+import static io.timeywimey.jocker.model.ContainerState.StatusEnum.*;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Arrays.asList;
 import static org.apache.commons.io.IOUtils.*;

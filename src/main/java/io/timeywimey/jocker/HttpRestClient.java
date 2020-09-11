@@ -1,10 +1,10 @@
-package it.dockins.jocker;
+package io.timeywimey.jocker;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import it.dockins.jocker.io.ChunkedInputStream;
-import it.dockins.jocker.io.ContentLengthInputStream;
-import it.dockins.jocker.model.ErrorDetail;
+import io.timeywimey.jocker.io.ChunkedInputStream;
+import io.timeywimey.jocker.io.ContentLengthInputStream;
+import io.timeywimey.jocker.model.ErrorDetail;
 import jnr.unixsocket.UnixSocketAddress;
 import jnr.unixsocket.UnixSocketChannel;
 
