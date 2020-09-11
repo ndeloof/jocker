@@ -196,6 +196,31 @@ public class DockerClientTest {
         docker.volumeDelete(name);
     }
 
+    @Test
+    public void networks() throws IOException, InterruptedException {
+        Network network = docker.networkCreate(new NetworkConfig().name("test").labels(label));
+        String id = network.getId();
+
+        List<Network> list = docker.networkList(new NetworkFilters().label("it.dockins.jocker=test"));
+        List<String> ids = list.stream().map(Network::getId).collect(Collectors.toList());
+        assertTrue(ids.contains(id));
+
+        String container = createLongRunContainer();
+        docker.networkConnect(id, container);
+
+        Network inspect = docker.networkInspect(id);
+        assertNotNull(inspect);
+        NetworkContainer net = inspect.getContainers().get(container);
+        assertNotNull(net);
+
+        docker.networkDisconnect(id, container, true);
+
+        inspect = docker.networkInspect(id);
+        assertNotNull(inspect);
+        assertTrue(!inspect.getContainers().containsKey(container));
+
+        docker.networkDelete(id);
+    }
 
     @Test
     public void imageBuild() throws IOException {

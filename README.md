@@ -136,12 +136,12 @@ public SomeType apiMethod(String param) {
 
 ### Networks 
 
-  - [ ] [NetworkList](https://docs.docker.com/engine/api/v1.40/#operation/NetworkList)
-  - [ ] [NetworkInspect](https://docs.docker.com/engine/api/v1.40/#operation/NetworkInspect)
-  - [ ] [NetworkDelete](https://docs.docker.com/engine/api/v1.40/#operation/NetworkDelete)
-  - [ ] [NetworkCreate](https://docs.docker.com/engine/api/v1.40/#operation/NetworkCreate)
-  - [ ] [NetworkConnect](https://docs.docker.com/engine/api/v1.40/#operation/NetworkConnect)
-  - [ ] [NetworkDisconnect](https://docs.docker.com/engine/api/v1.40/#operation/NetworkDisconnect)
+  - [x] [NetworkList](https://docs.docker.com/engine/api/v1.40/#operation/NetworkList)
+  - [x] [NetworkInspect](https://docs.docker.com/engine/api/v1.40/#operation/NetworkInspect)
+  - [x] [NetworkDelete](https://docs.docker.com/engine/api/v1.40/#operation/NetworkDelete)
+  - [x] [NetworkCreate](https://docs.docker.com/engine/api/v1.40/#operation/NetworkCreate)
+  - [x] [NetworkConnect](https://docs.docker.com/engine/api/v1.40/#operation/NetworkConnect)
+  - [x] [NetworkDisconnect](https://docs.docker.com/engine/api/v1.40/#operation/NetworkDisconnect)
   - [ ] [NetworkPrune](https://docs.docker.com/engine/api/v1.40/#operation/NetworkPrune)
 
 ### Volumes 

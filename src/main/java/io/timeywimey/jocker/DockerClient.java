@@ -25,6 +25,7 @@ import java.net.URI;
 import java.nio.channels.Channels;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.zip.GZIPOutputStream;
@@ -536,6 +537,69 @@ public class DockerClient extends HttpRestClient {
      */
     public void volumeDelete(String name) throws IOException {
         StringBuilder path = new StringBuilder("/v").append(version).append("/volumes/").append(name);
+        HttpRestClient.Response r = doDELETE(path.toString());
+    }
+
+
+    /**
+     * see https://docs.docker.com/engine/api/v1.40/#operation/NetworkList
+     */
+    public List<Network> networkList(NetworkFilters filters) throws IOException {
+        StringBuilder path = new StringBuilder("/v").append(version).append("/networks");
+        if (filters != null) path.append("?filters=").append(filters.encode(gson));
+        HttpRestClient.Response r = doGET(path.toString());
+        return gson.fromJson(r.getBody(), NetworkList.class);
+    }
+
+    /**
+     * see https://docs.docker.com/engine/api/v1.40/#operation/VolumesCreate
+     */
+    public Network networkCreate(NetworkConfig volume) throws IOException {
+        StringBuilder path = new StringBuilder("/v").append(version).append("/networks/create");
+        HttpRestClient.Response r = doPOST(path.toString(), gson.toJson(volume));
+        return gson.fromJson(r.getBody(), Network.class);
+    }
+
+    /**
+     * see https://docs.docker.com/engine/api/v1.40/#operation/NetworkInspect
+     */
+    public Network networkInspect(String id) throws IOException {
+        StringBuilder path = new StringBuilder("/v").append(version).append("/networks/").append(id);
+        HttpRestClient.Response r = doGET(path.toString());
+        return gson.fromJson(r.getBody(), Network.class);
+    }
+
+    public void networkConnect(String id, String container) throws IOException {
+        networkConnect(id, container, null);
+    }
+    /**
+     * see https://docs.docker.com/engine/api/v1.40/#operation/NetworkConnect
+     */
+    public void networkConnect(String id, String container, EndpointSettings endpoint) throws IOException {
+        StringBuilder path = new StringBuilder("/v").append(version).append("/networks/").append(id).append("/connect");
+        String body = gson.toJson(new Container().container(container).endpointConfig(endpoint));
+        HttpRestClient.Response r = doPOST(path.toString(), body);
+    }
+
+    public void networkDisconnect(String id, String container) throws IOException {
+        networkDisconnect(id, container, false);
+    }
+
+    /**
+     * see https://docs.docker.com/engine/api/v1.40/#operation/NetworkDisconnect
+     */
+    public void networkDisconnect(String id, String container, boolean force) throws IOException {
+        StringBuilder path = new StringBuilder("/v").append(version).append("/networks/").append(id).append("/disconnect");
+        String body = gson.toJson(new Container1().container(container).force(force));
+        HttpRestClient.Response r = doPOST(path.toString(), body);
+    }
+
+    /**
+     * see https://docs.docker.com/engine/api/v1.40/#operation/NetworkDelete
+     * @return
+     */
+    public void networkDelete(String name) throws IOException {
+        StringBuilder path = new StringBuilder("/v").append(version).append("/networks/").append(name);
         HttpRestClient.Response r = doDELETE(path.toString());
     }
 
