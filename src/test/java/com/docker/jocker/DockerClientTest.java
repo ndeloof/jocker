@@ -150,7 +150,7 @@ public class DockerClientTest {
         docker.imagePull("hello-world", null, null, System.out::println);
         String container = docker.containerCreate(new ContainerSpec().image("hello-world").labels(label).tty(true), null).getId();
         docker.containerStart(container);
-        docker.containerWait(container, WaitCondition.NEXT_EXIT);
+        docker.containerWait(container, WaitCondition.NOT_RUNNING);
 
         final ContainerPruneResponse response = docker.containerPrune(new ContainersFilters().label("it.dockins.jocker=test"));
         assertTrue(response.getContainersDeleted().contains(container));

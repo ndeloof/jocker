@@ -7,6 +7,7 @@ import com.docker.jocker.io.ContentLengthInputStream;
 import com.docker.jocker.model.ErrorDetail;
 import jnr.unixsocket.UnixSocketAddress;
 import jnr.unixsocket.UnixSocketChannel;
+import org.apache.commons.io.IOUtils;
 
 import javax.net.ssl.SSLContext;
 import java.io.*;
@@ -177,14 +178,14 @@ public class HttpRestClient implements Closeable {
         int status = readHttpStatus(in);
         Map<String, String> headers = readHttpResponseHeaders(in);
 
-        Reader body;
+        InputStream body;
         if (headers.containsKey("Content-Length")) {
             final int length = Integer.parseInt(headers.get("Content-Length"));
-            body = new InputStreamReader(new ContentLengthInputStream(in, length), UTF_8);
+            body = new ContentLengthInputStream(in, length);
         } else if (headers.containsKey("Transfer-Encoding") && "chunked".equals(headers.get("Transfer-Encoding"))) {
-            body = new InputStreamReader(new ChunkedInputStream(in), UTF_8);
+            body = new ChunkedInputStream(in);
         } else {
-            body = new InputStreamReader(in);
+            body = in;
         }
 
         Response response = new Response(headers, body);
@@ -250,16 +251,24 @@ public class HttpRestClient implements Closeable {
     }
 
     public static class Response {
-        private final Reader body;
+        private final InputStream body;
         private final Map<String,String> headers;
 
-        public Response(Map<String, String> headers, Reader body) {
+        public Response(Map<String, String> headers, InputStream body) {
             this.body = body;
             this.headers = headers;
         }
 
         public Reader getBody() {
-            return body;
+            return new InputStreamReader(body);
+        }
+
+        public void ignoreBody() throws IOException {
+            if (headers.containsKey("Content-Length")) {
+                IOUtils.toString(body, UTF_8);
+            } else if (headers.containsKey("Transfer-Encoding") && "chunked".equals(headers.get("Transfer-Encoding"))) {
+                IOUtils.toString(body, UTF_8);
+            }
         }
 
         public Map<String, String> getHeaders() {

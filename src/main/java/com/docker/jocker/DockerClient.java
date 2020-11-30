@@ -90,7 +90,7 @@ public class DockerClient extends HttpRestClient {
             .query("path", path)
             .query("noOverwriteDirNonDir", noOverwriteDirNonDir);
 
-        doPUT(req.toString(), tar);
+        doPUT(req.toString(), tar).ignoreBody();
     }
 
     /** Helper method to put a single file inside container */
@@ -126,7 +126,7 @@ public class DockerClient extends HttpRestClient {
      */
     public void containerStart(String container) throws IOException {
         Request req = Request("/v", version, "/containers/", container, "/start");
-        doPOST(req.toString());
+        doPOST(req.toString()).ignoreBody();
     }
 
     /**
@@ -134,7 +134,7 @@ public class DockerClient extends HttpRestClient {
      */
     public void containerStop(String container, int timeout) throws IOException {
         Request req = Request("/v", version, "/containers/", container, "/stop").query("t", timeout);
-        doPOST(req.toString());
+        doPOST(req.toString()).ignoreBody();
     }
 
     /**
@@ -142,7 +142,7 @@ public class DockerClient extends HttpRestClient {
      */
     public void containerRestart(String container, int timeout) throws IOException {
         Request req = Request("/v", version, "/containers/", container, "/restart").query("t", timeout);
-        doPOST(req.toString());
+        doPOST(req.toString()).ignoreBody();
     }
 
     /**
@@ -152,7 +152,7 @@ public class DockerClient extends HttpRestClient {
         Request req = Request("/v", version, "/containers/", container, "/resize")
                 .query("h", height)
                 .query("w", width);
-        doPOST(req.toString());
+        doPOST(req.toString()).ignoreBody();
     }
 
     /**
@@ -178,7 +178,7 @@ public class DockerClient extends HttpRestClient {
         if (signal != null) {
             req.query("signal", signal);
         }
-        doPOST(req.toString());
+        doPOST(req.toString()).ignoreBody();
     }
 
     /**
@@ -186,7 +186,7 @@ public class DockerClient extends HttpRestClient {
      */
     public void containerRename(String container, String name) throws IOException {
         Request req = Request("/v", version, "/containers/", container, "/rename").query("name", name);
-        doPOST(req.toString());
+        doPOST(req.toString()).ignoreBody();
     }
 
     /**
@@ -194,7 +194,7 @@ public class DockerClient extends HttpRestClient {
      */
     public void containerPause(String container) throws IOException {
         Request req = Request("/v", version, "/containers/", container, "/pause");
-        doPOST(req.toString());
+        doPOST(req.toString()).ignoreBody();
     }
 
     /**
@@ -202,7 +202,7 @@ public class DockerClient extends HttpRestClient {
      */
     public void containerUnpause(String container) throws IOException {
         Request req = Request("/v", version, "/containers/", container, "/unpause");
-        doPOST(req.toString());
+        doPOST(req.toString()).ignoreBody();
     }
 
     /**
@@ -226,7 +226,7 @@ public class DockerClient extends HttpRestClient {
                 .query("v", volumes)
                 .query("link", links);
 
-        doDELETE(req.toString());
+        doDELETE(req.toString()).ignoreBody();
     }
 
     public InputStream containerLogs(String container, boolean follow, boolean stdout, boolean stderr, boolean timestamps, int since, String tail) throws IOException {
@@ -527,7 +527,7 @@ public class DockerClient extends HttpRestClient {
      */
     public void volumeDelete(String name) throws IOException {
         Request req = Request("/v", version, "/volumes/", name);
-        HttpRestClient.Response r = doDELETE(req.toString());
+        doDELETE(req.toString()).ignoreBody();
     }
 
 
@@ -568,7 +568,7 @@ public class DockerClient extends HttpRestClient {
     public void networkConnect(String id, String container, EndpointSettings endpoint) throws IOException {
         Request req = Request("/v", version, "/networks/", id, "/connect");
         String body = gson.toJson(new Container().container(container).endpointConfig(endpoint));
-        HttpRestClient.Response r = doPOST(req.toString(), body);
+        doPOST(req.toString(), body).ignoreBody();
     }
 
     public void networkDisconnect(String id, String container) throws IOException {
@@ -581,7 +581,7 @@ public class DockerClient extends HttpRestClient {
     public void networkDisconnect(String id, String container, boolean force) throws IOException {
         Request req = Request("/v", version, "/networks/", id, "/disconnect");
         String body = gson.toJson(new Container1().container(container).force(force));
-        HttpRestClient.Response r = doPOST(req.toString(), body);
+        doPOST(req.toString(), body).ignoreBody();
     }
 
     /**
@@ -590,7 +590,7 @@ public class DockerClient extends HttpRestClient {
      */
     public void networkDelete(String name) throws IOException {
         Request req = Request("/v", version, "/networks/", name);
-        HttpRestClient.Response r = doDELETE(req.toString());
+        doDELETE(req.toString()).ignoreBody();
     }
 
     @Override
