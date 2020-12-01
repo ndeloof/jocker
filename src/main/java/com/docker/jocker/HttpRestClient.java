@@ -23,39 +23,34 @@ import java.util.Map;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-public class HttpRestClient implements Closeable {
+public class HttpRestClient {
 
-    protected final ByteChannel socket;
+    protected final URI uri;
     protected final String host;
     protected final Gson gson;
 
-    public HttpRestClient(URI uri, SSLContext ssl) throws IOException {
-        ByteChannel socket;
-        String host;
-        if ("unix".equals(uri.getScheme())) {
-            UnixSocketAddress address = new UnixSocketAddress(new File(uri.getPath()));
-            socket = UnixSocketChannel.open(address);
-            host = "docker";
-        } else {
-            host = uri.getHost();
-            socket = SocketChannel.open(new InetSocketAddress(host, uri.getPort()));
-            if (ssl != null) {
-                // FIXME JavaSE doesn't provide a SSL implementation (!)
-                // will need to include some dedicated code like https://github.com/baswerc/niossl/blob/master/src/main/java/org/baswell/niossl/SSLSocketChannel.java
-            }
-        }
-        this.socket = socket;
-        this.host = host;
+    public HttpRestClient(URI uri, SSLContext ssl) {
+        this.uri = uri;
         this.gson = new GsonBuilder().create();
-
+        if ("unix".equals(uri.getScheme())) {
+            this.host = "docker";
+        } else {
+            this.host = uri.getHost();
+            // FIXME add support for SSL on http
+        }
     }
 
-    @Override
-    public void close() throws IOException {
-        socket.close();
+    protected ByteChannel getSocket() throws IOException {
+        if ("unix".equals(uri.getScheme())) {
+            UnixSocketAddress address = new UnixSocketAddress(new File(uri.getPath()));
+            return UnixSocketChannel.open(address);
+        } else {
+            return SocketChannel.open(new InetSocketAddress(host, uri.getPort()));
+        }
     }
 
     public Response doGET(String path) throws IOException {
+        final ByteChannel socket = getSocket();
         final OutputStream out = Channels.newOutputStream(socket);
 
         final PrintWriter w = new PrintWriter(out);
@@ -64,7 +59,7 @@ public class HttpRestClient implements Closeable {
         w.println();
         w.flush();
 
-        return getResponse();
+        return getResponse(socket);
     }
 
     public Response doPOST(String path) throws IOException {
@@ -76,7 +71,11 @@ public class HttpRestClient implements Closeable {
     }
 
     public Response doPOST(String path, InputStream payload, Map<String, String> headers) throws IOException {
+        final ByteChannel socket = getSocket();
+        return doPOST(socket, path, payload, headers);
+    }
 
+    protected Response doPOST(ByteChannel socket, String path, InputStream payload, Map<String, String> headers) throws IOException {
         final OutputStream out = Channels.newOutputStream(socket);
         if (!headers.containsKey("Content-Type")) {
             headers.put("Content-Type", "application/json; charset=utf-8");
@@ -104,7 +103,7 @@ public class HttpRestClient implements Closeable {
         out.write(CHUNK_END);
         out.flush();
 
-        return getResponse();
+        return getResponse(socket);
     }
 
     private final byte[] CRLF = "\r\n".getBytes(US_ASCII);
@@ -118,6 +117,11 @@ public class HttpRestClient implements Closeable {
     }
 
     public Response doPOST(String path, byte[] payload, Map<String, String> headers) throws IOException {
+        final ByteChannel socket = getSocket();
+        return doPOST(socket, path, payload, headers);
+    }
+
+    protected Response doPOST(ByteChannel socket, String path, byte[] payload, Map<String, String> headers) throws IOException {
         final OutputStream out = Channels.newOutputStream(socket);
 
         final PrintWriter w = new PrintWriter(out);
@@ -132,21 +136,23 @@ public class HttpRestClient implements Closeable {
         w.flush();
         out.write(payload);
 
-        return getResponse();
+        return getResponse(socket);
     }
 
     public Response doHEAD(String path) throws IOException {
+        final ByteChannel socket = getSocket();
         final OutputStream out = Channels.newOutputStream(socket);
         final PrintWriter w = new PrintWriter(out);
         w.println("HEAD " + path + " HTTP/1.1");
         w.println("Host: "+host);
         w.println();
         w.flush();
-        return getResponse();
+        return getResponse(socket);
     }
 
 
     public Response doPUT(String path, byte[] bytes) throws IOException {
+        final ByteChannel socket = getSocket();
         final OutputStream out = Channels.newOutputStream(socket);
 
         final PrintWriter w = new PrintWriter(out);
@@ -158,10 +164,11 @@ public class HttpRestClient implements Closeable {
         w.flush();
         out.write(bytes);
 
-        return getResponse();
+        return getResponse(socket);
     }
 
     public Response doDELETE(String path) throws IOException {
+        final ByteChannel socket = getSocket();
         final OutputStream out = Channels.newOutputStream(socket);
 
         final PrintWriter w = new PrintWriter(out);
@@ -170,10 +177,10 @@ public class HttpRestClient implements Closeable {
         w.println();
         w.flush();
 
-        return getResponse();
+        return getResponse(socket);
     }
 
-    private Response getResponse() throws IOException {
+    private Response getResponse(ByteChannel socket) throws IOException {
         final InputStream in = Channels.newInputStream(socket);
         int status = readHttpStatus(in);
         Map<String, String> headers = readHttpResponseHeaders(in);
@@ -188,7 +195,7 @@ public class HttpRestClient implements Closeable {
             body = in;
         }
 
-        Response response = new Response(headers, body);
+        Response response = new Response(headers, body, socket);
 
 
         if (status / 100 > 2) {
@@ -250,25 +257,28 @@ public class HttpRestClient implements Closeable {
         return new InputStreamReader(new ChunkedInputStream(in), UTF_8);
     }
 
-    public static class Response {
+    public static class Response implements AutoCloseable {
         private final InputStream body;
         private final Map<String,String> headers;
+        private final Closeable close;
 
-        public Response(Map<String, String> headers, InputStream body) {
+        public Response(Map<String, String> headers, InputStream body, Closeable close) {
             this.body = body;
             this.headers = headers;
+            this.close = close;
         }
 
-        public Reader getBody() {
-            return new InputStreamReader(body);
+        @Override
+        public void close() throws IOException {
+            close.close();
         }
 
-        public void ignoreBody() throws IOException {
-            if (headers.containsKey("Content-Length")) {
-                IOUtils.toString(body, UTF_8);
-            } else if (headers.containsKey("Transfer-Encoding") && "chunked".equals(headers.get("Transfer-Encoding"))) {
-                IOUtils.toString(body, UTF_8);
-            }
+        public String getBody() throws IOException {
+            return IOUtils.toString(body, UTF_8);
+        }
+
+        public InputStream getBodyStream() {
+            return body;
         }
 
         public Map<String, String> getHeaders() {

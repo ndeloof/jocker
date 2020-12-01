@@ -8,10 +8,7 @@ import com.google.gson.annotations.SerializedName;
  * @author <a href="mailto:nicolas.deloof@gmail.com">Nicolas De Loof</a>
  */
 public class ContainerSpec extends ContainerConfig {
-
-    @SerializedName("ContainerConfig")
-    private ContainerConfig containerConfig;
-
+    
     @SerializedName("HostConfig")
     private HostConfig hostConfig;
 

@@ -45,11 +45,10 @@ public class DockerClientTest {
     
     @After
     public void tearDown() throws IOException {
-        try (DockerClient docker = new DockerClient("unix:///var/run/docker.sock")) {
-            ContainerSummary containers = docker.containerList(false, 10, false, new ContainersFilters().label("it.dockins.jocker=test"));
-            for (ContainerSummaryInner container : containers) {
-                docker.containerDelete(container.getId(), true, false, true);
-            }
+        DockerClient docker = new DockerClient("unix:///var/run/docker.sock");
+        ContainerSummary containers = docker.containerList(false, 10, false, new ContainersFilters().label("it.dockins.jocker=test"));
+        for (ContainerSummaryInner container : containers) {
+            docker.containerDelete(container.getId(), true, false, true);
         }
     }
 

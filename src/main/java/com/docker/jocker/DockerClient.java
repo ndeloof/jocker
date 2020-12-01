@@ -22,8 +22,10 @@ import java.io.OutputStream;
 import java.io.Reader;
 import java.net.Socket;
 import java.net.URI;
+import java.nio.channels.ByteChannel;
 import java.nio.channels.Channels;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -51,13 +53,15 @@ public class DockerClient extends HttpRestClient {
     }
 
     public SystemVersion version() throws IOException {
-        HttpRestClient.Response r = doGET("/version");
-        return gson.fromJson(r.getBody(), SystemVersion.class);
+        try (HttpRestClient.Response r = doGET("/version")) {
+            return gson.fromJson(r.getBody(), SystemVersion.class);
+        }
     }
 
     public SystemInfo info() throws IOException {
-        HttpRestClient.Response r = doGET("/v"+version+"/info");
-        return gson.fromJson(r.getBody(), SystemInfo.class);
+        try (HttpRestClient.Response r = doGET("/v"+version+"/info")) {
+            return gson.fromJson(r.getBody(), SystemInfo.class);
+        }
     }
 
     /**
@@ -77,8 +81,9 @@ public class DockerClient extends HttpRestClient {
         if (limit > 0) req.query("limit", limit);
         if (filters != null) req.query("filters", filters);
 
-        HttpRestClient.Response r = doGET(req.toString());
-        return gson.fromJson(r.getBody(), ContainerSummary.class);
+        try (HttpRestClient.Response r = doGET(req.toString())) {
+            return gson.fromJson(r.getBody(), ContainerSummary.class);
+        }
     }
 
     /**
@@ -90,7 +95,7 @@ public class DockerClient extends HttpRestClient {
             .query("path", path)
             .query("noOverwriteDirNonDir", noOverwriteDirNonDir);
 
-        doPUT(req.toString(), tar).ignoreBody();
+        try (HttpRestClient.Response r = doPUT(req.toString(), tar)) {}
     }
 
     /** Helper method to put a single file inside container */
@@ -110,15 +115,16 @@ public class DockerClient extends HttpRestClient {
     /**
      * see https://docs.docker.com/engine/api/v1.40/#operation/ContainerCreate
      */
-    public ContainerCreateResponse containerCreate(ContainerConfig containerConfig, String name) throws IOException {
+    public ContainerCreateResponse containerCreate(ContainerConfig containerSpec, String name) throws IOException {
         Request req = Request("/v", version, "/containers/create");
         if (name != null) {
             req.query("name", name);
         }
 
-        String spec = gson.toJson(containerConfig);
-        HttpRestClient.Response r = doPOST(req.toString(), spec);
-        return gson.fromJson(r.getBody(), ContainerCreateResponse.class);
+        String spec = gson.toJson(containerSpec);
+        try (HttpRestClient.Response r = doPOST(req.toString(), spec)) {
+            return gson.fromJson(r.getBody(), ContainerCreateResponse.class);
+        }
     }
 
     /**
@@ -126,7 +132,7 @@ public class DockerClient extends HttpRestClient {
      */
     public void containerStart(String container) throws IOException {
         Request req = Request("/v", version, "/containers/", container, "/start");
-        doPOST(req.toString()).ignoreBody();
+        try (HttpRestClient.Response r = doPOST(req.toString())) {}
     }
 
     /**
@@ -134,7 +140,7 @@ public class DockerClient extends HttpRestClient {
      */
     public void containerStop(String container, int timeout) throws IOException {
         Request req = Request("/v", version, "/containers/", container, "/stop").query("t", timeout);
-        doPOST(req.toString()).ignoreBody();
+        try (HttpRestClient.Response r = doPOST(req.toString())) {}
     }
 
     /**
@@ -142,7 +148,7 @@ public class DockerClient extends HttpRestClient {
      */
     public void containerRestart(String container, int timeout) throws IOException {
         Request req = Request("/v", version, "/containers/", container, "/restart").query("t", timeout);
-        doPOST(req.toString()).ignoreBody();
+        try (HttpRestClient.Response r = doPOST(req.toString())) {}
     }
 
     /**
@@ -152,7 +158,7 @@ public class DockerClient extends HttpRestClient {
         Request req = Request("/v", version, "/containers/", container, "/resize")
                 .query("h", height)
                 .query("w", width);
-        doPOST(req.toString()).ignoreBody();
+        try (HttpRestClient.Response r = doPOST(req.toString())) {}
     }
 
     /**
@@ -160,8 +166,9 @@ public class DockerClient extends HttpRestClient {
      */
     public ContainerChangeResponseItem[] containerChanges(String container, boolean stream) throws IOException {
         Request req = Request("/v", version, "/containers/", container, "/changes");
-        final HttpRestClient.Response response = doGET(req.toString());
-        return gson.fromJson(response.getBody(), ContainerChangeResponseItem[].class);
+        try (HttpRestClient.Response r = doGET(req.toString())) {
+            return gson.fromJson(r.getBody(), ContainerChangeResponseItem[].class);
+        }
     }
 
     /**
@@ -178,7 +185,7 @@ public class DockerClient extends HttpRestClient {
         if (signal != null) {
             req.query("signal", signal);
         }
-        doPOST(req.toString()).ignoreBody();
+        try (HttpRestClient.Response r = doPOST(req.toString())) {}
     }
 
     /**
@@ -186,7 +193,7 @@ public class DockerClient extends HttpRestClient {
      */
     public void containerRename(String container, String name) throws IOException {
         Request req = Request("/v", version, "/containers/", container, "/rename").query("name", name);
-        doPOST(req.toString()).ignoreBody();
+        try (HttpRestClient.Response r = doPOST(req.toString())) {}
     }
 
     /**
@@ -194,7 +201,7 @@ public class DockerClient extends HttpRestClient {
      */
     public void containerPause(String container) throws IOException {
         Request req = Request("/v", version, "/containers/", container, "/pause");
-        doPOST(req.toString()).ignoreBody();
+        try (HttpRestClient.Response r = doPOST(req.toString())) {}
     }
 
     /**
@@ -202,7 +209,7 @@ public class DockerClient extends HttpRestClient {
      */
     public void containerUnpause(String container) throws IOException {
         Request req = Request("/v", version, "/containers/", container, "/unpause");
-        doPOST(req.toString()).ignoreBody();
+        try (HttpRestClient.Response r = doPOST(req.toString())) {}
     }
 
     /**
@@ -213,8 +220,9 @@ public class DockerClient extends HttpRestClient {
         if (condition != null) {
             req.query("condition", condition.getValue());
         }
-        HttpRestClient.Response r = doPOST(req.toString());
-        return gson.fromJson(r.getBody(), ContainerWaitResponse.class);
+        try (HttpRestClient.Response r = doPOST(req.toString())) {
+            return gson.fromJson(r.getBody(), ContainerWaitResponse.class);
+        }
     }
 
     /**
@@ -226,7 +234,7 @@ public class DockerClient extends HttpRestClient {
                 .query("v", volumes)
                 .query("link", links);
 
-        doDELETE(req.toString()).ignoreBody();
+        try (HttpRestClient.Response r = doDELETE(req.toString())) {}
     }
 
     public InputStream containerLogs(String container, boolean follow, boolean stdout, boolean stderr, boolean timestamps, int since, String tail) throws IOException {
@@ -240,7 +248,7 @@ public class DockerClient extends HttpRestClient {
         }
 
         HttpRestClient.Response r = doGET(req.toString());
-        return new ChunkedInputStream(Channels.newInputStream(socket));
+        return r.getBodyStream();
     }
 
     public Streams containerAttach(String id, boolean stdin, boolean stdout, boolean stderr, boolean stream, boolean logs, String detachKeys) throws IOException {
@@ -254,13 +262,13 @@ public class DockerClient extends HttpRestClient {
             req.query("detachKeys", detachKeys);
         }
 
-        final HttpRestClient.Response response = doPOST(req.toString());
+        final ByteChannel socket = getSocket();
+        final HttpRestClient.Response response = doPOST(socket, req.toString(), new byte[0], Collections.EMPTY_MAP);
         return new Streams() {
 
             @Override
             public InputStream stdout() throws IOException {
-                // FIXME https://github.com/moby/moby/issues/35761
-                return new DockerMultiplexedInputStream(Channels.newInputStream(socket));
+                return new DockerMultiplexedInputStream(response.getBodyStream());
             }
 
             @Override
@@ -275,9 +283,9 @@ public class DockerClient extends HttpRestClient {
      * see https://docs.docker.com/engine/api/v1.40/#operation/ContainerInspect
      */
     public ContainerInspectResponse containerInspect(String container) throws IOException {
-        HttpRestClient.Response r = doGET("/v"+version+"/containers/"+container+"/json");
-        final Reader body = r.getBody();
-        return gson.fromJson(body, ContainerInspectResponse.class);
+        try (HttpRestClient.Response r = doGET("/v"+version+"/containers/"+container+"/json")) {
+            return gson.fromJson(r.getBody(), ContainerInspectResponse.class);
+        }
     }
 
     /**
@@ -286,8 +294,9 @@ public class DockerClient extends HttpRestClient {
     public String containerExec(String container, ExecConfig execConfig) throws IOException {
         Request req = Request("/v", version, "/containers/", container, "/exec");
         String spec = gson.toJson(execConfig);
-        HttpRestClient.Response r = doPOST(req.toString(), spec);
-        return gson.fromJson(r.getBody(), IdResponse.class).getId();
+        try (HttpRestClient.Response r = doPOST(req.toString(), spec)) {
+            return gson.fromJson(r.getBody(), IdResponse.class).getId();
+        }
     }
 
     /**
@@ -295,12 +304,11 @@ public class DockerClient extends HttpRestClient {
      */
     public FileSystemHeaders containerArchiveInfo(String container, String path) throws IOException {
         Request req = Request("/v", version, "/containers/", container, "/archive").query("path", path);
-        HttpRestClient.Response r = doHEAD(req.toString());
-        final String stats = r.getHeaders().get("X-Docker-Container-Path-Stat");
-        final byte[] json = Base64.getDecoder().decode(stats.getBytes(UTF_8));
-
-        try (InputStream stream = new ByteArrayInputStream(json);
-             Reader reader = new InputStreamReader(stream)) {
+        try (HttpRestClient.Response r = doHEAD(req.toString());
+             InputStream stream = new ByteArrayInputStream(
+                     Base64.getDecoder().decode(
+                        r.getHeaders().get("X-Docker-Container-Path-Stat").getBytes(UTF_8)));
+            Reader reader = new InputStreamReader(stream)) {
             return gson.fromJson(reader, FileSystemHeaders.class);
         }
     }
@@ -311,7 +319,7 @@ public class DockerClient extends HttpRestClient {
     public TarArchiveInputStream containerArchive(String container, String path) throws IOException {
         Request req = Request("/v", version, "/containers/", container, "/archive").query("path", path);
         HttpRestClient.Response r = doGET(req.toString());
-        return new TarArchiveInputStream(new ChunkedInputStream(Channels.newInputStream(socket)));
+        return new TarArchiveInputStream(r.getBodyStream());
     }
 
     /**
@@ -338,12 +346,12 @@ public class DockerClient extends HttpRestClient {
             @Override
             public InputStream stdout() throws IOException {
                 // FIXME https://github.com/moby/moby/issues/35761
-                return new DockerMultiplexedInputStream(Channels.newInputStream(socket));
+                return new DockerMultiplexedInputStream(Channels.newInputStream(getSocket()));
             }
 
             @Override
             public OutputStream stdin() throws IOException {
-                return Channels.newOutputStream(socket);
+                return Channels.newOutputStream(getSocket());
             }
         };
     }
@@ -353,9 +361,9 @@ public class DockerClient extends HttpRestClient {
      */
     public ExecInspectResponse execInspect(String id) throws IOException {
         Request req = Request("/v", version, "/exec/", id, "/json");
-        HttpRestClient.Response r = doGET(req.toString());
-        final Reader body = r.getBody();
-        return gson.fromJson(body, ExecInspectResponse.class);
+        try (HttpRestClient.Response r = doGET(req.toString())) {
+            return gson.fromJson(r.getBody(), ExecInspectResponse.class);
+        }
     }
 
 
@@ -372,13 +380,11 @@ public class DockerClient extends HttpRestClient {
         if (authentication != null) {
             headers.put("X-Registry-Auth", Base64.getEncoder().encodeToString(gson.toJson(authentication).getBytes(UTF_8)));
         }
-        doPOST(req.toString(), "", headers);
-
-        final ChunkedInputStream in = new ChunkedInputStream(Channels.newInputStream(socket));
-        final InputStreamReader reader = new InputStreamReader(in);
-
-        while (!in.isEof()) {
-            consumer.accept(gson.fromJson(new JsonReader(reader), CreateImageInfo.class));
+        try (HttpRestClient.Response r = doPOST(req.toString(), "", headers);
+            Reader reader = new InputStreamReader(r.getBodyStream(), UTF_8)) {
+            while (reader.ready()) {
+                consumer.accept(gson.fromJson(new JsonReader(reader), CreateImageInfo.class));
+            }
         }
     }
 
@@ -387,9 +393,9 @@ public class DockerClient extends HttpRestClient {
      */
     public Image imageInspect(String image) throws IOException {
         Request req = Request("/v", version, "/images/", image, "/json");
-        final HttpRestClient.Response response = doGET(req.toString());
-        final Reader body = response.getBody();
-        return gson.fromJson(body, Image.class);
+        try (HttpRestClient.Response r = doGET(req.toString())) {
+            return gson.fromJson(r.getBody(), Image.class);
+        }
     }
 
     /**
@@ -465,14 +471,12 @@ public class DockerClient extends HttpRestClient {
             headers.put("X-Registry-Auth", Base64.getEncoder().encodeToString(gson.toJson(authentication).getBytes(UTF_8)));
         }
 
-        doPOST(req.toString(), context, headers);
-
-        final ChunkedInputStream in = new ChunkedInputStream(Channels.newInputStream(socket));
-        final InputStreamReader reader = new InputStreamReader(in);
-
-        while (!in.isEof()) {
-            consumer.accept(gson.fromJson(new JsonReader(reader), BuildInfo.class));
-        }
+        try (HttpRestClient.Response r = doPOST(req.toString(), context, headers);
+             Reader reader = new InputStreamReader(r.getBodyStream())) {
+            while(reader.ready()) {
+                 consumer.accept(gson.fromJson(new JsonReader(reader), BuildInfo.class));
+             }
+         }
     }
 
     /**
@@ -485,7 +489,7 @@ public class DockerClient extends HttpRestClient {
         headers.put("X-Registry-Auth", Base64.getEncoder().encodeToString(gson.toJson(authentication).getBytes(UTF_8)));
         doPOST(req.toString(), "", headers);
 
-        final ChunkedInputStream in = new ChunkedInputStream(Channels.newInputStream(socket));
+        final ChunkedInputStream in = new ChunkedInputStream(Channels.newInputStream(getSocket()));
         final InputStreamReader reader = new InputStreamReader(in);
 
         while (!in.isEof()) {
@@ -517,8 +521,9 @@ public class DockerClient extends HttpRestClient {
      */
     public Volume volumeInspect(String name) throws IOException {
         Request req = Request("/v", version, "/volumes/", name);
-        HttpRestClient.Response r = doGET(req.toString());
-        return gson.fromJson(r.getBody(), Volume.class);
+        try (HttpRestClient.Response r = doGET(req.toString())) {
+            return gson.fromJson(r.getBody(), Volume.class);
+        }
     }
 
     /**
@@ -527,7 +532,7 @@ public class DockerClient extends HttpRestClient {
      */
     public void volumeDelete(String name) throws IOException {
         Request req = Request("/v", version, "/volumes/", name);
-        doDELETE(req.toString()).ignoreBody();
+        try (HttpRestClient.Response r = doDELETE(req.toString())) {}
     }
 
 
@@ -537,8 +542,9 @@ public class DockerClient extends HttpRestClient {
     public List<Network> networkList(NetworkFilters filters) throws IOException {
         Request req = Request("/v", version, "/networks");
         if (filters != null) req.query("filters", filters.encode(gson));
-        HttpRestClient.Response r = doGET(req.toString());
-        return gson.fromJson(r.getBody(), NetworkList.class);
+        try (HttpRestClient.Response r = doGET(req.toString())) {
+            return gson.fromJson(r.getBody(), NetworkList.class);
+        }
     }
 
     /**
@@ -568,7 +574,7 @@ public class DockerClient extends HttpRestClient {
     public void networkConnect(String id, String container, EndpointSettings endpoint) throws IOException {
         Request req = Request("/v", version, "/networks/", id, "/connect");
         String body = gson.toJson(new Container().container(container).endpointConfig(endpoint));
-        doPOST(req.toString(), body).ignoreBody();
+        try (HttpRestClient.Response r = doPOST(req.toString(), body)) {}
     }
 
     public void networkDisconnect(String id, String container) throws IOException {
@@ -581,7 +587,7 @@ public class DockerClient extends HttpRestClient {
     public void networkDisconnect(String id, String container, boolean force) throws IOException {
         Request req = Request("/v", version, "/networks/", id, "/disconnect");
         String body = gson.toJson(new Container1().container(container).force(force));
-        doPOST(req.toString(), body).ignoreBody();
+        try (HttpRestClient.Response r = doPOST(req.toString(), body)) {}
     }
 
     /**
@@ -590,7 +596,7 @@ public class DockerClient extends HttpRestClient {
      */
     public void networkDelete(String name) throws IOException {
         Request req = Request("/v", version, "/networks/", name);
-        doDELETE(req.toString()).ignoreBody();
+        try (HttpRestClient.Response r = doDELETE(req.toString())) {}
     }
 
     @Override
