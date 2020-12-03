@@ -251,7 +251,7 @@ public class DockerClient extends HttpRestClient {
         return r.getBodyStream();
     }
 
-    public Streams containerAttach(String id, boolean stdin, boolean stdout, boolean stderr, boolean stream, boolean logs, String detachKeys) throws IOException {
+    public Streams containerAttach(String id, boolean stdin, boolean stdout, boolean stderr, boolean stream, boolean logs, String detachKeys, boolean tty) throws IOException {
         Request req = Request("/v", version, "/containers/", id, "/attach")
                 .query("stdin", stdin)
                 .query("stdout", stdout)
@@ -262,19 +262,38 @@ public class DockerClient extends HttpRestClient {
             req.query("detachKeys", detachKeys);
         }
 
-        final ByteChannel socket = getSocket();
-        final HttpRestClient.Response response = doPOST(socket, req.toString(), new byte[0], Collections.EMPTY_MAP);
+        final Socket socket = getSocket();
+        final OutputStream out = socket.getOutputStream();
+        final HttpRestClient.Response r = doPOST(socket, req.toString(), new byte[0], Collections.EMPTY_MAP);
+
+        final InputStream s = r.getBodyStream();
+        final InputStream streamOut = !tty ? new DockerMultiplexedInputStream(s) : s;
+
         return new Streams() {
 
             @Override
             public InputStream stdout() throws IOException {
-                return new DockerMultiplexedInputStream(response.getBodyStream());
+                return streamOut;
+            }
+
+            @Override
+            public void redirectStderr(OutputStream stderr) throws IOException {
+                if (!tty) {
+                    ((DockerMultiplexedInputStream) streamOut).redirectStderr(stderr);
+                } else {
+                    throw new IOException("stream is not multiplexed");
+                }
             }
 
             @Override
             public OutputStream stdin() throws IOException {
                 if (!stdin) throw new IOException("stdin is not attached");
-                return Channels.newOutputStream(socket);
+                return out;
+            }
+
+            @Override
+            public void close() throws Exception {
+                socket.close();
             }
         };
     }
@@ -330,8 +349,9 @@ public class DockerClient extends HttpRestClient {
         if (filters != null) {
             req.query("filters", gson.toJson(filters));
         }
-        HttpRestClient.Response r = doPOST(req.toString());
-        return gson.fromJson(r.getBody(), ContainerPruneResponse.class);
+        try (HttpRestClient.Response r = doPOST(req.toString())) {
+            return gson.fromJson(r.getBody(), ContainerPruneResponse.class);
+        }
     }
 
     /**
@@ -339,19 +359,37 @@ public class DockerClient extends HttpRestClient {
      */
     public Streams execStart(String id, boolean detach, boolean tty) throws IOException {
         Request req = Request("/v", version, "/exec/", id, "/start");
-        final HttpRestClient.Response response = doPOST(req.toString(), "{\"Detach\": " + detach + ", \"Tty\": " + tty + "}");
-        if (detach) return null;
+        final String json = "{\"Detach\": " + detach + ", \"Tty\": " + tty + "}";
+        if (detach) {
+            try (HttpRestClient.Response r = doPOST(req.toString(), json)) {
+                return null;
+            }
+        }
+        final Socket socket = getSocket();
+        final OutputStream out = socket.getOutputStream();
+        final Response r = doPOST(socket, req.toString(), json.getBytes(UTF_8), Collections.EMPTY_MAP);
+        final DockerMultiplexedInputStream stream = new DockerMultiplexedInputStream(r.getBodyStream());
         return new Streams() {
 
             @Override
             public InputStream stdout() throws IOException {
                 // FIXME https://github.com/moby/moby/issues/35761
-                return new DockerMultiplexedInputStream(Channels.newInputStream(getSocket()));
+                return stream;
             }
 
             @Override
             public OutputStream stdin() throws IOException {
-                return Channels.newOutputStream(getSocket());
+                return out;
+            }
+
+            @Override
+            public void redirectStderr(OutputStream stderr) throws IOException {
+                stream.redirectStderr(stderr);
+            }
+
+            @Override
+            public void close() throws Exception {
+                socket.close();
             }
         };
     }
@@ -487,13 +525,15 @@ public class DockerClient extends HttpRestClient {
         Request req = Request("/v", version, "/images/", image, "/push").query("tag", tag);
         Map headers = new HashMap();
         headers.put("X-Registry-Auth", Base64.getEncoder().encodeToString(gson.toJson(authentication).getBytes(UTF_8)));
-        doPOST(req.toString(), "", headers);
 
-        final ChunkedInputStream in = new ChunkedInputStream(Channels.newInputStream(getSocket()));
-        final InputStreamReader reader = new InputStreamReader(in);
+        final Socket socket = getSocket();
+        try (final Response r = doPOST(socket, req.toString(), "".getBytes(), headers);
+             final ChunkedInputStream in = new ChunkedInputStream(socket.getInputStream());
+             final InputStreamReader reader = new InputStreamReader(in)) {
 
-        while (!in.isEof()) {
-            consumer.accept(gson.fromJson(new JsonReader(reader), PushImageInfo.class));
+            while (!in.isEof()) {
+                consumer.accept(gson.fromJson(new JsonReader(reader), PushImageInfo.class));
+            }
         }
     }
 

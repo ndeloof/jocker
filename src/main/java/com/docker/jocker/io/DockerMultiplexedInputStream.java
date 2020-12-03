@@ -2,6 +2,7 @@ package com.docker.jocker.io;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 
 /**
@@ -13,16 +14,25 @@ import java.nio.charset.StandardCharsets;
 public class DockerMultiplexedInputStream extends InputStream {
 
     private final InputStream multiplexed;
+    private OutputStream stderr;
     int next;
 
     public DockerMultiplexedInputStream(InputStream in) {
         multiplexed = in;
         next = 0;
+        stderr = System.err;
+    }
+
+    public void redirectStderr(OutputStream stderr) {
+        this.stderr = stderr;
     }
 
     @Override
     public int read() throws IOException {
         readInternal();
+        if (next == 0) {
+            return 0;
+        }
         next--;
         return multiplexed.read();
     }
@@ -59,7 +69,7 @@ public class DockerMultiplexedInputStream extends InputStream {
                         if (i < 0) break; // EOF
                         received += i;
                     }
-                    System.err.printf("Unexpected data on container stderr: {}\n", new String(payload, StandardCharsets.UTF_8));
+                    stderr.write(payload);
                     break;
                 default:
                     throw new IOException("Unexpected application/vnd.docker.raw-stream frame type " + header[0]);
@@ -69,6 +79,6 @@ public class DockerMultiplexedInputStream extends InputStream {
 
     @Override
     public void close() throws IOException {
-        // NOP
+        multiplexed.close();
     }
 }

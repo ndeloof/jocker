@@ -7,9 +7,11 @@ import java.io.OutputStream;
 /**
  * @author <a href="mailto:nicolas.deloof@gmail.com">Nicolas De Loof</a>
  */
-public interface Streams {
+public interface Streams extends AutoCloseable {
 
     InputStream stdout() throws IOException;
+
+    void redirectStderr(OutputStream stderr) throws IOException;
 
     OutputStream stdin() throws IOException;
 }

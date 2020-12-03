@@ -11,11 +11,10 @@ import org.apache.commons.io.IOUtils;
 
 import javax.net.ssl.SSLContext;
 import java.io.*;
-import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.net.URI;
 import java.nio.channels.ByteChannel;
 import java.nio.channels.Channels;
-import java.nio.channels.SocketChannel;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -40,18 +39,18 @@ public class HttpRestClient {
         }
     }
 
-    protected ByteChannel getSocket() throws IOException {
+    protected Socket getSocket() throws IOException {
         if ("unix".equals(uri.getScheme())) {
             UnixSocketAddress address = new UnixSocketAddress(new File(uri.getPath()));
-            return UnixSocketChannel.open(address);
+            return UnixSocketChannel.open(address).socket();
         } else {
-            return SocketChannel.open(new InetSocketAddress(host, uri.getPort()));
+            return new Socket(host, uri.getPort());
         }
     }
 
     public Response doGET(String path) throws IOException {
-        final ByteChannel socket = getSocket();
-        final OutputStream out = Channels.newOutputStream(socket);
+        final Socket socket = getSocket();
+        final OutputStream out = socket.getOutputStream();
 
         final PrintWriter w = new PrintWriter(out);
         w.println("GET " + path + " HTTP/1.1");
@@ -71,12 +70,12 @@ public class HttpRestClient {
     }
 
     public Response doPOST(String path, InputStream payload, Map<String, String> headers) throws IOException {
-        final ByteChannel socket = getSocket();
+        final Socket socket = getSocket();
         return doPOST(socket, path, payload, headers);
     }
 
-    protected Response doPOST(ByteChannel socket, String path, InputStream payload, Map<String, String> headers) throws IOException {
-        final OutputStream out = Channels.newOutputStream(socket);
+    protected Response doPOST(Socket socket, String path, InputStream payload, Map<String, String> headers) throws IOException {
+        final OutputStream out = socket.getOutputStream();
         if (!headers.containsKey("Content-Type")) {
             headers.put("Content-Type", "application/json; charset=utf-8");
         }
@@ -117,13 +116,12 @@ public class HttpRestClient {
     }
 
     public Response doPOST(String path, byte[] payload, Map<String, String> headers) throws IOException {
-        final ByteChannel socket = getSocket();
+        final Socket socket = getSocket();
         return doPOST(socket, path, payload, headers);
     }
 
-    protected Response doPOST(ByteChannel socket, String path, byte[] payload, Map<String, String> headers) throws IOException {
-        final OutputStream out = Channels.newOutputStream(socket);
-
+    protected Response doPOST(Socket socket, String path, byte[] payload, Map<String, String> headers) throws IOException {
+        final OutputStream out = socket.getOutputStream();
         final PrintWriter w = new PrintWriter(out);
         w.println("POST " + path + " HTTP/1.1");
         w.println("Host: "+host);
@@ -140,8 +138,8 @@ public class HttpRestClient {
     }
 
     public Response doHEAD(String path) throws IOException {
-        final ByteChannel socket = getSocket();
-        final OutputStream out = Channels.newOutputStream(socket);
+        final Socket socket = getSocket();
+        final OutputStream out = socket.getOutputStream();
         final PrintWriter w = new PrintWriter(out);
         w.println("HEAD " + path + " HTTP/1.1");
         w.println("Host: "+host);
@@ -152,8 +150,8 @@ public class HttpRestClient {
 
 
     public Response doPUT(String path, byte[] bytes) throws IOException {
-        final ByteChannel socket = getSocket();
-        final OutputStream out = Channels.newOutputStream(socket);
+        final Socket socket = getSocket();
+        final OutputStream out = socket.getOutputStream();
 
         final PrintWriter w = new PrintWriter(out);
         w.println("PUT " + path + " HTTP/1.1");
@@ -168,8 +166,8 @@ public class HttpRestClient {
     }
 
     public Response doDELETE(String path) throws IOException {
-        final ByteChannel socket = getSocket();
-        final OutputStream out = Channels.newOutputStream(socket);
+        final Socket socket = getSocket();
+        final OutputStream out = socket.getOutputStream();
 
         final PrintWriter w = new PrintWriter(out);
         w.println("DELETE " + path + " HTTP/1.1");
@@ -180,8 +178,8 @@ public class HttpRestClient {
         return getResponse(socket);
     }
 
-    private Response getResponse(ByteChannel socket) throws IOException {
-        final InputStream in = Channels.newInputStream(socket);
+    private Response getResponse(Socket socket) throws IOException {
+        final InputStream in = socket.getInputStream();
         int status = readHttpStatus(in);
         Map<String, String> headers = readHttpResponseHeaders(in);
 
@@ -196,7 +194,6 @@ public class HttpRestClient {
         }
 
         Response response = new Response(headers, body, socket);
-
 
         if (status / 100 > 2) {
             String message = String.valueOf(status);

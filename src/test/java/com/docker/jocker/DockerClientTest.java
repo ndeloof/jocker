@@ -124,10 +124,25 @@ public class DockerClientTest {
     public void containerAttach() throws IOException {
         docker.imagePull("alpine", null, null, System.out::println);
         String container = docker.containerCreate(new ContainerSpec().image("alpine").labels(label)
-                .attachStdin(true).attachStdout(true).cmd(asList("ping", "localhost")), null).getId();
+                .attachStdin(true).attachStdout(true).tty(true).cmd(asList("ping", "localhost", "-c", "1")), null).getId();
 
         docker.containerStart(container);
-        final Streams streams = docker.containerAttach(container, true, true, false, true, true, null);
+        final Streams streams = docker.containerAttach(container, true, true, false, true, true, null, true);
+
+        final BufferedReader reader = new BufferedReader(new InputStreamReader(streams.stdout()));
+        String output = reader.readLine();
+        System.out.println("output: " + output);
+        assertTrue(output.startsWith("PING localhost (127.0.0.1):"));
+    }
+
+    @Test
+    public void containerAttachTTyDisabled() throws IOException {
+        docker.imagePull("alpine", null, null, System.out::println);
+        String container = docker.containerCreate(new ContainerSpec().image("alpine").labels(label)
+                .attachStdin(true).attachStdout(true).tty(false).cmd(asList("ping", "localhost", "-c", "1")), null).getId();
+
+        docker.containerStart(container);
+        final Streams streams = docker.containerAttach(container, true, true, false, true, true, null, false);
 
         final BufferedReader reader = new BufferedReader(new InputStreamReader(streams.stdout()));
         String output = reader.readLine();
