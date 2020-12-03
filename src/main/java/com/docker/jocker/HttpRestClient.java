@@ -13,8 +13,6 @@ import javax.net.ssl.SSLContext;
 import java.io.*;
 import java.net.Socket;
 import java.net.URI;
-import java.nio.channels.ByteChannel;
-import java.nio.channels.Channels;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -183,23 +181,21 @@ public class HttpRestClient {
         int status = readHttpStatus(in);
         Map<String, String> headers = readHttpResponseHeaders(in);
 
-        InputStream body;
+        Response<?> response;
         if (headers.containsKey("Content-Length")) {
             final int length = Integer.parseInt(headers.get("Content-Length"));
-            body = new ContentLengthInputStream(in, length);
+            response = new Response(headers, new ContentLengthInputStream(in, length), socket);
         } else if (headers.containsKey("Transfer-Encoding") && "chunked".equals(headers.get("Transfer-Encoding"))) {
-            body = new ChunkedInputStream(in);
+            response = new Response(headers, new ChunkedInputStream(in), socket);
         } else {
-            body = in;
+            response = new Response(headers, in, socket);
         }
-
-        Response response = new Response(headers, body, socket);
 
         if (status / 100 > 2) {
             String message = String.valueOf(status);
             final String type = headers.get("Content-Type");
             if (type != null && type.startsWith("application/json")) {
-                message = gson.fromJson(response.getBody(), ErrorDetail.class).getMessage();
+                message = gson.fromJson(response.readBody(), ErrorDetail.class).getMessage();
             }
             if (status == 404) {
                 throw new NotFoundException(message);
@@ -254,12 +250,12 @@ public class HttpRestClient {
         return new InputStreamReader(new ChunkedInputStream(in), UTF_8);
     }
 
-    public static class Response implements AutoCloseable {
-        private final InputStream body;
+    public static class Response<I extends InputStream> implements AutoCloseable {
+        private final I body;
         private final Map<String,String> headers;
         private final Closeable close;
 
-        public Response(Map<String, String> headers, InputStream body, Closeable close) {
+        public Response(Map<String, String> headers, I body, Closeable close) {
             this.body = body;
             this.headers = headers;
             this.close = close;
@@ -270,11 +266,11 @@ public class HttpRestClient {
             close.close();
         }
 
-        public String getBody() throws IOException {
+        public String readBody() throws IOException {
             return IOUtils.toString(body, UTF_8);
         }
 
-        public InputStream getBodyStream() {
+        public I getBody() {
             return body;
         }
 
