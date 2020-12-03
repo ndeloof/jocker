@@ -17,5 +17,8 @@ jobs:
         with:
           java-version: ${{ matrix.java }}
 
-      - name: Build and test
-        run: mvn package
+      - name: Compile
+        run: mvn compile
+
+      - name: Test
+        run: mvn test
