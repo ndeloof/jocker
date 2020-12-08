@@ -16,6 +16,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -234,6 +235,27 @@ public class DockerClientTest {
         assertTrue(!inspect.getContainers().containsKey(container));
 
         docker.networkDelete(id);
+    }
+
+    @Test
+    public void events() throws IOException, InterruptedException {
+        docker.imagePull("hello-world", null, null, System.out::println);
+        String container = docker.containerCreate(new ContainerSpec().image("hello-world").labels(label), null).getId();
+        List<String> actions = new ArrayList<>();
+        new Thread(() -> {
+            try {
+                docker.events(new EventsFilters().container(container), e -> {
+                    actions.add(e.getAction());
+                    return true;
+                });
+            } catch (IOException e) {
+                fail(e.getMessage());
+            }
+        }).start();
+        docker.containerDelete(container, true, false, true);
+        Thread.sleep(100);
+        assertEquals(1, actions.size());
+        assertEquals("destroy", actions.get(0));
     }
 
     @Test

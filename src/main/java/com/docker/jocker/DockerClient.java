@@ -631,12 +631,33 @@ public class DockerClient extends HttpRestClient {
 
     /**
      * see https://docs.docker.com/engine/api/v1.40/#operation/NetworkDelete
-     * @return
      */
     public void networkDelete(String name) throws IOException {
         Request req = Request("/v", version, "/networks/", name);
         try (HttpRestClient.Response r = doDELETE(req.toString())) {}
     }
+
+
+    /**
+     * see https://docs.docker.com/engine/api/v1.40/#operation/SystemEvents
+     */
+    public void events(EventsFilters filter, EventConsumer consumer) throws IOException {
+        Request req = Request("/v", version, "/events");
+        try (HttpRestClient.Response<ChunkedInputStream> r = doGET(req.toString());
+             final ChunkedInputStream body = r.getBody();
+             InputStreamReader reader = new InputStreamReader(body, UTF_8)) {
+            while (!body.isEof()) {
+                boolean done = consumer.accept(gson.fromJson(new JsonReader(reader), SystemEventsResponse.class));
+                if (done) return;
+            }
+        }
+    }
+
+    @FunctionalInterface
+    public interface EventConsumer {
+          boolean accept(SystemEventsResponse event);
+    }
+
 
     @Override
     public String toString() {
