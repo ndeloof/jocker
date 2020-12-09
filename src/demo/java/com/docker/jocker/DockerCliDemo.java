@@ -4,12 +4,8 @@ import com.docker.jocker.model.ContainerCreateResponse;
 import com.docker.jocker.model.ContainerSpec;
 import com.docker.jocker.model.Streams;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.nio.channels.Channels;
 import java.util.Arrays;
 
 /**

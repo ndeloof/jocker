@@ -1,10 +1,10 @@
 package com.docker.jocker;
 
 
-import com.google.gson.stream.JsonReader;
-import com.docker.jocker.model.*;
 import com.docker.jocker.io.ChunkedInputStream;
 import com.docker.jocker.io.DockerMultiplexedInputStream;
+import com.docker.jocker.model.*;
+import com.google.gson.stream.JsonReader;
 import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
@@ -23,6 +23,7 @@ import java.io.Reader;
 import java.net.Socket;
 import java.net.URI;
 import java.util.Base64;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -75,9 +76,9 @@ public class DockerClient extends HttpRestClient {
     public ContainerSummary containerList(boolean all, int limit, boolean size, String filters) throws IOException {
         Request req = Request("/v", version, "/containers/json")
             .query("all", all)
-            .query("size", size);
-        if (limit > 0) req.query("limit", limit);
-        if (filters != null) req.query("filters", filters);
+            .query("size", size)
+            .query("filters", filters)
+            .query("limit", limit);
 
         try (HttpRestClient.Response r = doGET(req.toString())) {
             return gson.fromJson(r.readBody(), ContainerSummary.class);
@@ -114,10 +115,8 @@ public class DockerClient extends HttpRestClient {
      * see https://docs.docker.com/engine/api/v1.40/#operation/ContainerCreate
      */
     public ContainerCreateResponse containerCreate(ContainerConfig containerSpec, String name) throws IOException {
-        Request req = Request("/v", version, "/containers/create");
-        if (name != null) {
-            req.query("name", name);
-        }
+        Request req = Request("/v", version, "/containers/create")
+                .query("name", name);
 
         String spec = gson.toJson(containerSpec);
         try (HttpRestClient.Response r = doPOST(req.toString(), spec)) {
@@ -137,7 +136,8 @@ public class DockerClient extends HttpRestClient {
      * see https://docs.docker.com/engine/api/v1.40/#operation/ContainerStop
      */
     public void containerStop(String container, int timeout) throws IOException {
-        Request req = Request("/v", version, "/containers/", container, "/stop").query("t", timeout);
+        Request req = Request("/v", version, "/containers/", container, "/stop")
+                .query("t", timeout);
         try (HttpRestClient.Response r = doPOST(req.toString())) {}
     }
 
@@ -145,7 +145,8 @@ public class DockerClient extends HttpRestClient {
      * see https://docs.docker.com/engine/api/v1.40/#operation/ContainerRestart
      */
     public void containerRestart(String container, int timeout) throws IOException {
-        Request req = Request("/v", version, "/containers/", container, "/restart").query("t", timeout);
+        Request req = Request("/v", version, "/containers/", container, "/restart")
+                .query("t", timeout);
         try (HttpRestClient.Response r = doPOST(req.toString())) {}
     }
 
@@ -179,10 +180,8 @@ public class DockerClient extends HttpRestClient {
      * see https://docs.docker.com/engine/api/v1.40/#operation/ContainerKill
      */
     public void containerKill(String container, String signal) throws IOException {
-        Request req = Request("/v", version, "/containers/", container, "/kill");
-        if (signal != null) {
-            req.query("signal", signal);
-        }
+        Request req = Request("/v", version, "/containers/", container, "/kill")
+                .query("signal", signal);
         try (HttpRestClient.Response r = doPOST(req.toString())) {}
     }
 
@@ -190,7 +189,8 @@ public class DockerClient extends HttpRestClient {
      * see https://docs.docker.com/engine/api/v1.40/#operation/ContainerKill
      */
     public void containerRename(String container, String name) throws IOException {
-        Request req = Request("/v", version, "/containers/", container, "/rename").query("name", name);
+        Request req = Request("/v", version, "/containers/", container, "/rename")
+                .query("name", name);
         try (HttpRestClient.Response r = doPOST(req.toString())) {}
     }
 
@@ -214,10 +214,8 @@ public class DockerClient extends HttpRestClient {
      * see https://docs.docker.com/engine/api/v1.40/#operation/ContainerWait
      */
     public ContainerWaitResponse containerWait(String container, WaitCondition condition) throws IOException {
-        Request req = Request("/v", version, "/containers/", container, "/wait");
-        if (condition != null) {
-            req.query("condition", condition.getValue());
-        }
+        Request req = Request("/v", version, "/containers/", container, "/wait")
+                .query("condition", condition.getValue());
         try (HttpRestClient.Response r = doPOST(req.toString())) {
             return gson.fromJson(r.readBody(), ContainerWaitResponse.class);
         }
@@ -240,10 +238,8 @@ public class DockerClient extends HttpRestClient {
                 .query("follow", follow)
                 .query("stdout", stdout)
                 .query("stderr", stderr)
-                .query("since", since);
-        if (tail != null) {
-            req.query("tail", tail);
-        }
+                .query("since", since)
+                .query("tail", tail);
 
         HttpRestClient.Response r = doGET(req.toString());
         return r.getBody();
@@ -255,10 +251,8 @@ public class DockerClient extends HttpRestClient {
                 .query("stdout", stdout)
                 .query("stderr", stderr)
                 .query("stream", stream)
-                .query("logs", logs);
-        if (detachKeys != null) {
-            req.query("detachKeys", detachKeys);
-        }
+                .query("logs", logs)
+                .query("detachKeys", detachKeys);
 
         final Socket socket = getSocket();
         final OutputStream out = socket.getOutputStream();
@@ -320,7 +314,8 @@ public class DockerClient extends HttpRestClient {
      * see https://docs.docker.com/engine/api/v1.40/#operation/ContainerArchiveInfo
      */
     public FileSystemHeaders containerArchiveInfo(String container, String path) throws IOException {
-        Request req = Request("/v", version, "/containers/", container, "/archive").query("path", path);
+        Request req = Request("/v", version, "/containers/", container, "/archive")
+                .query("path", path);
         try (HttpRestClient.Response<?> r = doHEAD(req.toString());
              InputStream stream = new ByteArrayInputStream(
                      Base64.getDecoder().decode(
@@ -334,7 +329,8 @@ public class DockerClient extends HttpRestClient {
      * see https://docs.docker.com/engine/api/v1.40/#operation/ContainerArchive
      */
     public TarArchiveInputStream containerArchive(String container, String path) throws IOException {
-        Request req = Request("/v", version, "/containers/", container, "/archive").query("path", path);
+        Request req = Request("/v", version, "/containers/", container, "/archive")
+                .query("path", path);
         HttpRestClient.Response r = doGET(req.toString());
         return new TarArchiveInputStream(r.getBody());
     }
@@ -343,10 +339,8 @@ public class DockerClient extends HttpRestClient {
      * see https://docs.docker.com/engine/api/v1.40/#operation/ContainerPrune
      */
     public ContainerPruneResponse containerPrune(ContainersFilters filters) throws IOException {
-        Request req = Request("/v", version, "/containers/prune");
-        if (filters != null) {
-            req.query("filters", gson.toJson(filters));
-        }
+        Request req = Request("/v", version, "/containers/prune")
+                .query("filters", gson.toJson(filters));
         try (HttpRestClient.Response r = doPOST(req.toString())) {
             return gson.fromJson(r.readBody(), ContainerPruneResponse.class);
         }
@@ -445,62 +439,25 @@ public class DockerClient extends HttpRestClient {
                 .query("nocache", buildImageRequest.isNocache())
                 .query("rm", buildImageRequest.isRm())
                 .query("forcerm", buildImageRequest.isForcerm())
-                .query("squash", buildImageRequest.isSquash());
-
-        if (buildImageRequest.getDockerfile() != null) {
-            req.query("dockerfile", buildImageRequest.getDockerfile());
-        }
-        if (buildImageRequest.getBuildargs() != null && !buildImageRequest.getBuildargs().isEmpty()) {
-            req.query("buildargs", gson.toJson(buildImageRequest.getBuildargs()));
-        }
-        if (buildImageRequest.getTag() != null) {
-            req.query("t", buildImageRequest.getTag());
-        }
-        if (buildImageRequest.getExtrahosts() != null) {
-            req.query("extrahosts", buildImageRequest.getExtrahosts());
-        }
-        if (buildImageRequest.getUlimits() != null) {
-            req.query("ulimits", buildImageRequest.getUlimits());
-        }
-        if (buildImageRequest.getRemote() != null) {
-            req.query("remote", buildImageRequest.getRemote());
-        }
-        if (buildImageRequest.getExtrahosts() != null) {
-            req.query("extrahosts", buildImageRequest.getExtrahosts());
-        }
-        if (buildImageRequest.getCachefrom() != null && buildImageRequest.getCachefrom().size() > 0) {
-            req.query("cachefrom", gson.toJson(buildImageRequest.getCachefrom()));
-        }
-        if (buildImageRequest.getPull() != null) {
-            req.query("pull", buildImageRequest.getPull());
-        }
-        if (buildImageRequest.getMemory() >= 0) {
-            req.query("memory", buildImageRequest.getMemory());
-        }
-        if (buildImageRequest.getMemswap() >= 0) {
-            req.query("memswap", buildImageRequest.getMemswap());
-        }
-        if (buildImageRequest.getCpushares() >= 0) {
-            req.query("cpushares", buildImageRequest.getCpushares());
-        }
-        if (buildImageRequest.getCpuperiod() >= 0) {
-            req.query("cpuperiod", buildImageRequest.getCpuperiod());
-        }
-        if (buildImageRequest.getCpuquota() >= 0) {
-            req.query("cpuquota", buildImageRequest.getCpuquota());
-        }
-        if (buildImageRequest.getCpusetcpus() != null) {
-            req.query("cpusetcpus", buildImageRequest.getCpusetcpus());
-        }
-        if (buildImageRequest.getShmsize() >= 0) {
-            req.query("shmsize", buildImageRequest.getShmsize());
-        }
-        if (buildImageRequest.getLabels() != null && !buildImageRequest.getLabels().isEmpty()) {
-            req.query("labels", gson.toJson(buildImageRequest.getLabels()));
-        }
-        if (buildImageRequest.getNetworkmode() != null) {
-            req.query("networkmode", buildImageRequest.getNetworkmode());
-        }
+                .query("squash", buildImageRequest.isSquash())
+                .query("dockerfile", buildImageRequest.getDockerfile())
+                .query("t", buildImageRequest.getTag())
+                .query("extrahosts", buildImageRequest.getExtrahosts())
+                .query("ulimits", buildImageRequest.getUlimits())
+                .query("remote", buildImageRequest.getRemote())
+                .query("extrahosts", buildImageRequest.getExtrahosts())
+                .query("pull", buildImageRequest.getPull())
+                .query("memory", buildImageRequest.getMemory())
+                .query("memswap", buildImageRequest.getMemswap())
+                .query("cpushares", buildImageRequest.getCpushares())
+                .query("cpuperiod", buildImageRequest.getCpuperiod())
+                .query("cpuquota", buildImageRequest.getCpuquota())
+                .query("cpusetcpus", buildImageRequest.getCpusetcpus())
+                .query("shmsize", buildImageRequest.getShmsize())
+                .query("networkmode", buildImageRequest.getNetworkmode())
+                .query("buildargs", buildImageRequest.getBuildargs())
+                .query("cachefrom", buildImageRequest.getCachefrom())
+                .query("labels", buildImageRequest.getLabels());
 
         Map headers = new HashMap();
         headers.put("Content-Type", "application/x-tar");
@@ -521,7 +478,8 @@ public class DockerClient extends HttpRestClient {
      */
     public void imagePush(String image, String tag, AuthConfig authentication, Consumer<PushImageInfo> consumer) throws IOException {
         if (tag == null) tag = "latest";
-        Request req = Request("/v", version, "/images/", image, "/push").query("tag", tag);
+        Request req = Request("/v", version, "/images/", image, "/push")
+                .query("tag", tag);
         Map headers = new HashMap();
         headers.put("X-Registry-Auth", Base64.getEncoder().encodeToString(gson.toJson(authentication).getBytes(UTF_8)));
 
@@ -540,8 +498,8 @@ public class DockerClient extends HttpRestClient {
      * see https://docs.docker.com/engine/api/v1.40/#operation/Volumes
      */
     public VolumeListResponse volumeList(VolumeFilters filters) throws IOException {
-        Request req = Request("/v", version, "/volumes");
-        if (filters != null) req.query("filters", filters.encode(gson));
+        Request req = Request("/v", version, "/volumes")
+                .query("filters", filters);
         HttpRestClient.Response r = doGET(req.toString());
         return gson.fromJson(r.readBody(), VolumeListResponse.class);
     }
@@ -579,8 +537,8 @@ public class DockerClient extends HttpRestClient {
      * see https://docs.docker.com/engine/api/v1.40/#operation/NetworkList
      */
     public List<Network> networkList(NetworkFilters filters) throws IOException {
-        Request req = Request("/v", version, "/networks");
-        if (filters != null) req.query("filters", filters.encode(gson));
+        Request req = Request("/v", version, "/networks")
+                .query("filters", filters);
         try (HttpRestClient.Response r = doGET(req.toString())) {
             return gson.fromJson(r.readBody(), NetworkList.class);
         }
@@ -641,8 +599,11 @@ public class DockerClient extends HttpRestClient {
     /**
      * see https://docs.docker.com/engine/api/v1.40/#operation/SystemEvents
      */
-    public void events(EventsFilters filter, EventConsumer consumer) throws IOException {
-        Request req = Request("/v", version, "/events");
+    public void events(EventsFilters filters, String since, String until, EventConsumer consumer) throws IOException {
+        Request req = Request("/v", version, "/events")
+                .query("filters", filters)
+                .query("since", since)
+                .query("until", until);
         try (HttpRestClient.Response<ChunkedInputStream> r = doGET(req.toString());
              final ChunkedInputStream body = r.getBody();
              InputStreamReader reader = new InputStreamReader(body, UTF_8)) {
@@ -679,7 +640,38 @@ public class DockerClient extends HttpRestClient {
         final StringBuilder sb = new StringBuilder();
         private boolean q;
 
+        private Request query(String name, Filters value) {
+            if (value != null) {
+                query(name, value.encode(gson));
+            }
+            return this;
+        }
+
+        private Request query(String name, int value) {
+            if (value > 0) {
+                query(name, (Object) value);
+            }
+            return this;
+        }
+
+        private Request query(String name, Map<?,?> value) {
+            if (value != null && value.size() > 0) {
+                query(name, gson.toJson(value));
+            }
+            return this;
+        }
+
+        private Request query(String name, Collection<?> value) {
+            if (value != null && value.size() > 0) {
+                query(name, gson.toJson(value));
+            }
+            return this;
+        }
+
         private Request query(String name, Object value) {
+            if (value == null) {
+                return this;
+            }
             sb.append( q ? "&": "?");
             sb.append(name);
             sb.append("=");

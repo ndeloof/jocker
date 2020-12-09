@@ -1,16 +1,23 @@
 package com.docker.jocker;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.docker.jocker.io.ChunkedInputStream;
 import com.docker.jocker.io.ContentLengthInputStream;
 import com.docker.jocker.model.ErrorDetail;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import jnr.unixsocket.UnixSocketAddress;
 import jnr.unixsocket.UnixSocketChannel;
 import org.apache.commons.io.IOUtils;
 
 import javax.net.ssl.SSLContext;
-import java.io.*;
+import java.io.Closeable;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.PrintWriter;
+import java.io.Reader;
 import java.net.Socket;
 import java.net.URI;
 import java.util.Collections;

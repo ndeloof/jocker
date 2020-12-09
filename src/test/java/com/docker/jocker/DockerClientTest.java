@@ -1,14 +1,16 @@
 package com.docker.jocker;
 
-import com.docker.jocker.model.*;
 import com.docker.jocker.io.TarInputStreamBuilder;
+import com.docker.jocker.model.*;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.compress.utils.IOUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
@@ -25,7 +27,7 @@ import java.util.stream.Collectors;
 import static com.docker.jocker.model.ContainerState.StatusEnum.*;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Arrays.asList;
-import static org.apache.commons.io.IOUtils.*;
+import static org.apache.commons.io.IOUtils.read;
 import static org.junit.Assert.*;
 
 /**
@@ -36,6 +38,9 @@ public class DockerClientTest {
     private static final Map<String, String> label = Collections.singletonMap("it.dockins.jocker", "test");
 
     DockerClient docker;
+
+    @Rule
+    public Timeout globalTimeout = Timeout.seconds(10);
             
     @Before
     public void init() throws IOException {
@@ -81,9 +86,9 @@ public class DockerClientTest {
     public void containerStopAndRestart() throws IOException {
         final String container = createLongRunContainer();
         assertEquals(RUNNING, docker.containerInspect(container).getState().getStatus());
-        docker.containerStop(container, 10);
+        docker.containerStop(container, 1);
         assertEquals(EXITED, docker.containerInspect(container).getState().getStatus());
-        docker.containerRestart(container, 10);
+        docker.containerRestart(container, 1);
         assertEquals(RUNNING, docker.containerInspect(container).getState().getStatus());
 
         System.out.println(container);
@@ -241,21 +246,18 @@ public class DockerClientTest {
     public void events() throws IOException, InterruptedException {
         docker.imagePull("hello-world", null, null, System.out::println);
         String container = docker.containerCreate(new ContainerSpec().image("hello-world").labels(label), null).getId();
-        List<String> actions = new ArrayList<>();
-        new Thread(() -> {
-            try {
-                docker.events(new EventsFilters().container(container), e -> {
-                    actions.add(e.getAction());
-                    return true;
-                });
-            } catch (IOException e) {
-                fail(e.getMessage());
-            }
-        }).start();
         docker.containerDelete(container, true, false, true);
-        Thread.sleep(100);
-        assertEquals(1, actions.size());
-        assertEquals("destroy", actions.get(0));
+
+        final String[] expected = new String[]{"create", "destroy"};
+
+        docker.events(new EventsFilters().container(container), "0", null, new DockerClient.EventConsumer() {
+            int received;
+            @Override
+            public boolean accept(SystemEventsResponse event) {
+                assertEquals(expected[received], event.getAction());
+                return ++received == 2;
+            }
+        });
     }
 
     @Test
@@ -274,7 +276,9 @@ public class DockerClientTest {
     private String createLongRunContainer() throws IOException {
         docker.imagePull("alpine", null, null, System.out::println);
         final String container = docker.containerCreate(new ContainerSpec()
-                                       .image("alpine").labels(label).cmd(asList("sleep", "10")), null).getId();
+                .image("alpine")
+                .labels(label)
+                .cmd(asList("sleep", "10")), null).getId();
         docker.containerStart(container);
         System.out.println("container ID: " + container);
         return container;

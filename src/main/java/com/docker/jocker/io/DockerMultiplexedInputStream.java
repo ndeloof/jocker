@@ -3,7 +3,6 @@ package com.docker.jocker.io;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
 
 /**
  * De-multiplex an <code>application/vnd.docker.raw-stream</code> as described on
