@@ -40,23 +40,11 @@ public abstract class Command {
         ARGS: while (it.hasNext()) {
             String arg = it.next();
             if (arg.startsWith("--")) {
-                for (Option option : options) {
-                    it.remove();
-                    if (option.name.equals(arg.substring(2))) {
-                        option.set(args);
-                        continue ARGS;
-                    }
-                }
+                if (applyOption(args, it, arg.substring(2))) continue;
                 throw new IllegalArgumentException("unknown option "+arg);
             }
             if (arg.startsWith("-")) {
-                for (Option option : options) {
-                    it.remove();
-                    if (option.name.equals(arg.substring(2))) {
-                        option.set(args);
-                        continue ARGS;
-                    }
-                }
+                if (applyOption(args, it, arg.substring(1))) continue ARGS;
                 throw new IllegalArgumentException("unknown option "+arg);
             }
             for (Command c : subCommands) {
@@ -67,7 +55,22 @@ public abstract class Command {
                 }
             }
             run(args);
+            return;
         }
+    }
+
+    private boolean applyOption(List<String> args, ListIterator<String> it, String arg) {
+        for (Option option : options) {
+            if (option.name.equals(arg)) {
+                it.remove();
+                int i = option.set(args);
+                while (i-- > 0) {
+                    it.remove();
+                }
+                return true;
+            }
+        }
+        return false;
     }
 
     abstract void run(List<String> args) throws IOException;

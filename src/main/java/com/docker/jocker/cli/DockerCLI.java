@@ -26,6 +26,7 @@ public class DockerCLI extends Command {
         
         subCommands(
                 new VersionCommand(dockerClient),
+                new RunCommand(dockerClient),
                 new InpsectCommand(dockerClient));
     }
 
