@@ -58,6 +58,30 @@ you do something you consider useful :P
 - [ ] conquer the world
 
 
+## How about Docker command line? 
+
+Jocker is desgined as a Docker API client, which for many commands is more-or-less
+equivalent with the `docker` command line verbs and flags, with a significant exception
+for `docker run`. 
+
+For demonstration purpose, Jocker do include `com.docker.jocker.cli` package which is
+not intended to be used for anything but experiments and demonstration. Still you can 
+read this code and understand how to fill the gap between the command line you know and
+the actual API calls.
+
+If you want to run Jocker as a "command line" demo, just:
+
+1. build the command line archive: `mvn compile assembly:single`
+1. create an alias: `alias jocker="java -jar target/jocker-0.1-SNAPSHOT-jar-with-dependencies.jar"`
+1. enjoy your new docker CLI :P
+```console
+➜  jocker run -i --rm --name jocker alpine
+echo hello $HOSTNAME
+hello jocker
+```
+
+
+
 ## Supported APIs :
 
 ### Missing something ?

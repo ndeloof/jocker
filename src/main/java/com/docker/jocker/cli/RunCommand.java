@@ -4,8 +4,10 @@ import com.docker.jocker.DockerClient;
 import com.docker.jocker.model.ContainerCreateResponse;
 import com.docker.jocker.model.ContainerInspectResponse;
 import com.docker.jocker.model.ContainerSpec;
+import com.docker.jocker.model.ContainerWaitResponse;
 import com.docker.jocker.model.HostConfig;
 import com.docker.jocker.model.Streams;
+import com.docker.jocker.model.WaitCondition;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -48,6 +50,7 @@ public class RunCommand extends Command {
                 .hostConfig(new HostConfig()
                     .autoRemove(autoRemove))
                 .image(image)
+                .hostname(containerName)
                 .tty(tty)
                 .openStdin(interactive)
                 .stdinOnce(interactive)
@@ -55,20 +58,21 @@ public class RunCommand extends Command {
                 .attachStdout(interactive)
                 .attachStderr(interactive)
                 .cmd(args), containerName);
+        final String containerID = created.getId();
 
         if (detach){
-            dockerClient.containerStart(created.getId());
-            System.out.println(created.getId());
+            dockerClient.containerStart(containerID);
+            System.out.println(containerID);
             return;
         }
 
 
-        Streams streams = dockerClient.containerAttach(created.getId(), true, true, true, true, false, null, tty);
+        Streams streams = dockerClient.containerAttach(containerID, true, true, true, true, false, null, tty);
         if (!tty) {
             streams.redirectStderr(System.err);
         }
 
-        dockerClient.containerStart(created.getId());
+        dockerClient.containerStart(containerID);
 
         final InputStream stdout = streams.stdout();
         final OutputStream stdin = streams.stdin();
@@ -76,6 +80,7 @@ public class RunCommand extends Command {
             new Thread(() -> {
                 try {
                     int c;
+                    // NOTE: java does not allow to configure terminal in character mode
                     while ((c = System.in.read()) > 0) {
                         stdin.write(c);
                     }
@@ -84,14 +89,19 @@ public class RunCommand extends Command {
                 }
             }).start();
         }
-        try {
-            int c;
-            while ((c = stdout.read()) > 0) {
-                System.out.write(c);
+        new Thread(() -> {
+            try {
+                int c;
+                while ((c = stdout.read()) > 0) {
+                    System.out.print((char)c);
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
             }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        }).start();
+        final ContainerWaitResponse st = dockerClient.containerWait(containerID, WaitCondition.NEXT_EXIT);
+        System.out.println(st);
+        System.exit(st.getStatusCode());
     }
 
     protected void setContainerName(String n) {
