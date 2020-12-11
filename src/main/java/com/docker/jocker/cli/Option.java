@@ -1,6 +1,6 @@
 package com.docker.jocker.cli;
 
-import java.util.List;
+import java.util.ListIterator;
 import java.util.function.Consumer;
 
 /**
@@ -18,9 +18,9 @@ public class Option {
         this.setter = setter;
     }
 
-    public int set(List<String> args) {
-         setter.accept(args.get(0));
-         return 1;
+    public void set(ListIterator<String> args) {
+         setter.accept(args.next());
+         args.remove();
     }
 }
 

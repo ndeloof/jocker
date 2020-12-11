@@ -1,6 +1,6 @@
 package com.docker.jocker.cli;
 
-import java.util.List;
+import java.util.ListIterator;
 import java.util.function.Consumer;
 
 /**
@@ -15,9 +15,8 @@ public class BoolOption extends Option {
         this.setter = setter;
     }
 
-    public int set(List<String> args) {
+    public void set(ListIterator<String> args) {
          setter.accept(true);
-         return 0;
     }
 }
 
